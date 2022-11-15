@@ -42,7 +42,6 @@ switch:
     on_turn_on:
       if:
         condition:
-          - wifi.connected:
           - api.connected:
           - lambda: 'return id(smartbulbs_latch);'
         then:
@@ -61,7 +60,6 @@ switch:
     on_turn_off:
       if:
         condition:
-          - wifi.connected:
           - api.connected:
           - lambda: 'return id(smartbulbs_latch);'
         then:
