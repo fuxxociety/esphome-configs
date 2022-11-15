@@ -1,0 +1,36 @@
+---
+platform: gpio
+pin:
+  inverted: true
+  number: ${gpio_pin}
+name: '${friendly_name} Button ${number}'
+internal: true
+filters:
+  - delayed_on_off: 50ms
+on_multi_click:
+  - timing:  # 1 click
+      - ON for at most 0.4s
+      - OFF for at least 0.2s
+    then:
+      - ${output_${number}_type}.toggle: '${output_${number}_type}${number}'
+  - timing:  # 2 clicks
+      - ON for at most 0.4s
+      - OFF for at most 0.5s
+      - ON for at most 0.5s
+      - OFF for at least 0.5s
+    then:
+      - ${output_${number}_type}.toggle: '${output_${number}_type}${number}'
+  - timing:  # 4 clicks
+      - ON for at most 0.5s
+      - OFF for at most 0.5s
+      - ON for at most 0.5s
+      - OFF for at most 0.5s
+      - ON for at most 0.5s
+      - OFF for at most 0.5s
+      - ON for at most 0.5s
+      - OFF for at least 0.2s
+    then:
+  - timing:  # button held
+      - 'ON for at least ${button_${number}_hold}'
+      # - OFF for at least 0.2s
+    then:
