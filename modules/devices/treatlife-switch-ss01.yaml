@@ -1,0 +1,112 @@
+substitutions:
+  output_1_type: switch
+  button_1_hold: 4s
+
+globals:
+  - id: smartbulbs_latch
+    type: bool
+    restore_value: no
+    initial_value: "false"
+
+binary_sensor:
+  - <<: !include
+      file: treatlife/button.yaml
+      vars:
+        number: "1"
+        gpio_pin: GPIO13
+
+switch:
+  - name: "${friendly_name} Smart Bulbs"
+    platform: template
+    id: sw_relay_mode
+    device_class: "switch"
+    entity_category: "config"
+    lambda: |-
+      if (id(smartbulbs_latch)) {
+        return true;
+      } else {
+        return false;
+      }      
+    turn_on_action:
+      - globals.set:
+          id: smartbulbs_latch
+          value: "true"
+    turn_off_action:
+      - globals.set:
+          id: smartbulbs_latch
+          value: "false"
+  - platform: template
+    id: 'switch1'
+    name: ${friendly_name} Output
+    optimistic: true
+    on_turn_on:
+      if:
+        condition:
+          - wifi.connected:
+          - api.connected:
+          - lambda: 'return id(smartbulbs_latch);'
+        then:
+          - switch.turn_on: 'relay1'
+          - light.turn_on: 
+              id: indicator
+              effect: "None"
+              brightness: 100%
+          - homeassistant.event:
+              event: esphome.switch
+              data:
+                device: ${name}
+                action: click
+        else: # If HA can't be reached, then
+          - switch.turn_on: 'relay1'
+    on_turn_off:
+      if:
+        condition:
+          - wifi.connected:
+          - api.connected:
+          - lambda: 'return id(smartbulbs_latch);'
+        then:
+          - switch.turn_on: 'relay1'
+          - light.turn_off: indicator 
+          - homeassistant.event:
+              event: esphome.switch
+              data:
+                device: ${name}
+                action: click
+        else: # If HA can't be reached, then
+          - switch.turn_off: 'relay1'
+          - light.turn_off: indicator
+  - platform: output
+    id: 'relay1'
+    # name: whatever
+    output: relay
+    restore_mode: RESTORE_DEFAULT_OFF
+    internal: true
+
+light:
+  - platform: status_led
+    id: errorled
+    pin:
+      number: GPIO05
+      inverted: True
+  - platform: monochromatic
+    name: "${friendly_name} Indicator"
+    id: indicator
+    output: pwm
+    default_transition_length: 500ms
+    internal: true
+    effects:
+      - pulse:
+          transition_length: 0.5s
+          update_interval: 0.5s
+
+output:
+  - platform: esp8266_pwm
+    pin: GPIO04
+    id: pwm
+    frequency: 300 Hz
+    min_power: 10%
+    inverted: true
+  - platform: gpio
+    pin: GPIO12
+    id: relay
+    inverted: false
