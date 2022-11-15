@@ -1,0 +1,9 @@
+# Light indicator
+substitutions:
+  name: s-frontporch # hostname & entity_id
+  friendly_name: Front Porch # Displayed in HA frontend
+
+packages:
+  common: !include modules/common-8266.yaml
+#  switch: !include modules/devices/treatlife/entire-ss01-2way-notimer.yaml
+  switch: !include modules/devices/treatlife-switch-ss01.yaml
