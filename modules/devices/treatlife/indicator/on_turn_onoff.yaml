@@ -1,6 +1,6 @@
 ---
 then:
-  - light.turn_${action}: !include { file: indicator_${action}.yaml
+  - <<: !include indicator_${action}.yaml
   - if:
       condition:
       - api.connected:
