@@ -10,13 +10,13 @@ switch:
       } else {
         return false;
       }
-    turn_on_action: !include { file: on_off_actions.yaml, vars: { action: on,  truefalse: true } }
-    turn_off_action: !include { file: on_off_actions.yaml, vars: { action: off, truefalse: false } }
+    turn_on_action: !include { file: indicator/on_off_actions.yaml, vars: { action: on,  truefalse: true } }
+    turn_off_action: !include { file: indicator/on_off_actions.yaml, vars: { action: off, truefalse: false } }
 
   - platform: template
     id: logicswitch # This logical switch controls the logical status of the switch
     name: ${friendly_name} Status
     optimistic: true
     restore_state: yes
-    on_turn_on: !include { file: on_turn_onoff.yaml, vars: { action: on } }
-    on_turn_off: !include { file: on_turn_onoff.yaml, vars: { action: off } }
+    on_turn_on: !include { file: indicator/on_turn_onoff.yaml, vars: { action: on } }
+    on_turn_off: !include { file: indicator/on_turn_onoff.yaml, vars: { action: off } }
