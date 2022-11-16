@@ -1,5 +1,4 @@
 ---
-turn_${action}_action:
   - globals.set:
       id: latch${number}
       value: "true"
