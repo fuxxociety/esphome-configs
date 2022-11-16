@@ -1,11 +1,13 @@
 ---
 substitutions:
-  wifi_reboot_timeout: 5min
+  wifi_fast_connect: off # default: off
+  wifi_reboot_timeout: 5min # default: 15min
 
 wifi:
   # use_address: $ip
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+  fast_connect: $wifi_fast_connect
   reboot_timeout: $wifi_reboot_timeout
   ap:
     password: !secret ap_password

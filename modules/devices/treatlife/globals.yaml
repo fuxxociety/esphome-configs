@@ -1,0 +1,25 @@
+# See: https://esphome.io/guides/automations.html#global-variables
+---
+- id: 'glbl_${relay_${number}_type}${number}_latched' # 'glbl_switch1_latched
+  type: bool
+  restore_value: yes
+  initial_value: "true"
+
+# For the auto-off automation
+- id: 'glbl_timeout_${relay_${number}_type}${number}_armed' # 'glbl_timeout_switch1_armed
+  type: bool
+  restore_value: yes
+  initial_value: "true"
+
+- id: 'glbl_timeout_${relay_${number}_type}${number}_length_ticks' # 'glbl_timeout_switch1_length_ticks
+  type: int
+  restore_value: yes
+  # 15 min * 60 seconds = 900
+  initial_value: "900"
+
+# We ALSO need to keep track of the number of 'ticks'
+# add _prefix to indicate 'internal'
+- id: '_glbl_timeout_${relay_${number}_type}${number}_ticks' # '_glbl_timeout_switch1_ticks
+  type: int
+  restore_value: no
+  initial_value: "0"

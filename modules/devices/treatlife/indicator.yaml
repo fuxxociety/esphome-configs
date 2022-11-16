@@ -1,0 +1,22 @@
+switch:
+  - name: "${friendly_name} Smart Bulbs"
+    platform: template
+    id: sw_relay_mode
+    device_class: "switch"
+    entity_category: "config"
+    lambda: |-
+      if (id(latch${number})) {
+        return true;
+      } else {
+        return false;
+      }
+switch: !include { file: on_off_action.yaml, vars: { action: on,  truefalse: true } }
+switch: !include { file: on_off_action.yaml, vars: { action: off, truefalse: false } }
+
+  - platform: template
+    id: logicswitch # This logical switch controls the logical status of the switch
+    name: ${friendly_name} Status
+    optimistic: true
+    restore_state: yes
+switch: !include { file: on_turn_onoff.yaml, vars: { action: on } }
+switch: !include { file: on_turn_onoff.yaml, vars: { action: off } }

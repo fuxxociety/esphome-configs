@@ -1,0 +1,16 @@
+on_turn_${action}:
+  then:
+    - light.turn_${action}: indicator
+      !include { file: indicator_${action}.yaml
+    - if:
+        condition:
+        - api.connected:
+        - lambda: 'return id(latch${number});'
+        then:
+          - homeassistant.event:
+              event: esphome.switch
+              data:
+                device: ${name}
+                action: '${action}'
+        else: # If HA can't be reached, then
+        - ${output_${number}_type}.turn_${action}: '${output_${number}_type}${number}'

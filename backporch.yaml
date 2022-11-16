@@ -1,0 +1,9 @@
+substitutions:
+  hostname: s-backporch # lowercase, no spaces
+  friendly_name: "Back Porch"
+  icon: "mdi:light-switch"
+  relay_1_type: switch
+  button_1_hold: 1s
+
+packages:
+  treatlife: !include modules/devices/treatlife-switch-ss01.yaml

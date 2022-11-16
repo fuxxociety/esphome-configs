@@ -1,0 +1,4 @@
+        - light.turn_on: 
+            id: indicator
+            effect: "None"
+            brightness: 100%

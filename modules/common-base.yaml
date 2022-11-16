@@ -4,6 +4,7 @@ esphome:
 
 packages:
   wifi: !include common/wifi.yaml
+  captive_portal: !include common/captive_portal.yaml
   ota: !include common/ota.yaml
   sensors: !include common/sensors.yaml
   binary_sensors: !include common/binary_sensors.yaml

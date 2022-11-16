@@ -1,0 +1,6 @@
+---
+turn_${action}_action:
+  - globals.set:
+      id: latch${number}
+      value: "true"
+  - ${output_${number}_type}.turn_${action}: '${output_${number}_type}${number}'
