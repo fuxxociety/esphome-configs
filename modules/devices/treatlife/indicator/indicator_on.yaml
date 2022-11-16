@@ -1,4 +1,5 @@
 ---
-id: indicator
-effect: "None"
-brightness: 100%
+  - light.turn_${action}:
+      id: indicator
+      effect: "None"
+      brightness: 100%
