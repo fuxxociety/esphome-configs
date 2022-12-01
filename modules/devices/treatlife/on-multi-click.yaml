@@ -1,0 +1,38 @@
+---
+- timing:
+  - ON for at most 0.5s
+  - OFF for at least 0.2s
+  then:
+    - logger.log: "Single Click"
+    - homeassistant.event:
+        event: esphome.${friendly_name}_Button
+        data:
+          title: single_click
+- timing:
+  - ON for at most 0.5s
+  - OFF for at most 0.5s
+  - ON for at most 0.5s
+  - OFF for at least 0.2s
+  then:
+    - logger.log: "Double Click"
+    - homeassistant.event:
+        event: esphome.${friendly_name}_Button
+        data:
+          title: double_click
+#- timing:
+#  - ON for 1s to 2s
+#  - OFF for at least 0.5s
+#  then:
+#    - logger.log: "Single Long Clicked"
+#    - homeassistant.event:
+#        event: esphome.${friendly_name}_Button
+#        data:
+#          title: long_click
+- timing:
+  - ON for at least 10s
+  then:
+    - logger.log: "Click and Hold"
+    - homeassistant.event:
+        event: esphome.${friendly_name}_Button
+        data:
+          title: hold
