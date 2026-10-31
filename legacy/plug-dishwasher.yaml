@@ -1,0 +1,41 @@
+# https://esphome.io/guides/configuration-types.html#substitutions
+substitutions:
+  # substitutions can be changed here if you are using this file directly in the ESPHome dashboard.  The better approach is
+  # to incorporate this file as a package using the following packages: configuration, and then overwrite these substitutions
+  # in your local yaml file by redefining them.
+
+  name: dishwasher              # **** CHANGE DEVICE NAME TO SOMETHING UNIQUE PER DEVICE.  RENAME YAML FILE TO SAME NAME.    ****
+                                # **** USE DASHES (-) INSTEAD OF SPACES OR UNDERSCORE (_).  USE ONLY LOWER CASE LETTERS.     ****
+  friendly_name: Dishwasher     # **** CHANGE FRIENDLY NAME TO SOMETHING UNIQUE PER DEVICE                                   ****
+
+   # https://esphome.io/components/switch/gpio.html?highlight=restore_mode
+  sub_restore_mode: RESTORE_DEFAULT_ON  # overwrite to change boot up behavior of relay
+
+  disable_entities:  "true"     # set to "false" to have all entities show up in Home Assistant automatically
+  disable_webserver: "false"    # set to "true" to disable the webserver listening on port 80.
+
+  # substitutions for button actions.  on_press and on_release implement a timer scheme with configurable delay.
+  # on_hold_30s re-enables the AP and captive portal for the precompiled update binary.
+  # any length of hold can be implemented with just on_press and on_release using the following directions.  This
+  # is basically how this yaml file works.
+  #   * have a delay for the desired hold in the on_press script
+  #   * stop the on_press script in the on_release script
+  #   * place actions in the on_press script after the delay to perform them while still holding the button
+  #   * place actions in the on_release script, with the condition that the on_press script is not running, to
+  #     perform them on release of the button.
+  sub_on_press:         script_do_nothing  # executes right when button is initially pressed
+  sub_on_release:       script_do_nothing  # executes right when button is released
+  sub_on_hold_30s:      script_force_ap    # executes right when button has been held for 5s, while button is still being held
+
+  sub_on_turn_on:       script_do_nothing
+  sub_on_turn_off:      script_do_nothing
+
+  # an extra script that, if running, will stop the relay from toggling on button release.
+  # used to not toggle when WiFi AP is re-enabled on update bin file.
+  sub_toggle_check: script_force_ap
+
+  # made this a substitution so that the update bin file and yaml compiled versions can have different defaults
+  default_button_config: "Toggle on Press"
+
+packages:
+  sw: !include devices/Minoston-Smartplug-MP22WP.yaml

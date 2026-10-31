@@ -1,0 +1,14 @@
+---
+# https://esphome.io/guides/configuration-types.html#substitutions
+substitutions:
+  device_description: "Kauf BLF10 RGB-CW Smart Bulb"
+  system_name: livingroom-shelf          # hostname & entity_id
+                                          # **** USE DASHES (-) INSTEAD OF SPACES OR UNDERSCORE (_).  USE ONLY LOWER CASE LETTERS.     ****
+  servicename: 'bulb_livingroom_shelf'   #
+  friendly_name: 'Livingroom Shelf'      # Displayed in HA frontend
+
+  disable_entities:  "true"     # set to "false" to have all entities show up in Home Assistant automatically
+  disable_webserver: "true"    # set to "true" to disable the webserver listening on port 80.
+
+packages:
+  kauf_bulb: !include devices/kauf-bulb-minimal.yaml

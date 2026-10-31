@@ -1,0 +1,290 @@
+# ratgdo v2.5i / v2.52i / v2.53i garage door controller, ESP8266, Security+ 2.0. Upstream's static/v25iboard.yaml +
+# base.yaml (github.com/ratgdo/esphome-ratgdo @ c11e934) inlined on top of the shared common/ layer: same entities and
+# names except the door, which is the device's main entity (name: None -> cover.<device>), ids without the id_prefix.
+# The component and its libraries are vendored in components/ (ratgdo, secplus, espsoftwareserial; see VENDORED.md in
+# each). Left out because common/ provides them: time, restart button, firmware version sensor, captive portal, API,
+# OTA, Wi-Fi. Left out on purpose: remote package (duplicates the above), dashboard_import + name_add_mac_suffix
+# (adoption), improv_serial (needs UART logging; credentials come from secrets), web_server and its OTA (no password).
+#
+# Device file:
+#   substitutions: {name: cover-garage, friendly_name: Garage Door, room_key: garage_door}
+#   packages:      {device: !include templates/ratgdo/v25i.yaml}
+substitutions:
+  device_description: ratgdo v2.5i garage door controller (Security+ 2.0)
+  uart_tx_pin: D1
+  uart_rx_pin: D2
+  input_obst_pin: D7
+  status_door_pin: D0
+  status_obstruction_pin: D8
+  dry_contact_open_pin: D5
+  dry_contact_close_pin: D6
+  dry_contact_light_pin: D3
+
+packages:
+  platform: !include ../../common/platforms/esp8266.yaml
+
+esphome:
+  min_version: 2026.4.0
+  project:
+    name: ratgdo.v25iboard_secplus2
+    version: "2.5i"
+
+esp8266:
+  board: d1_mini               # the D0..D8 pin names above; overrides the platform's esp12e
+  restore_from_flash: true     # the rolling code counter must survive a power cut
+
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [ratgdo]
+
+safe_mode:
+
+preferences:
+  flash_write_interval: 1min
+
+ratgdo:
+  id: gdo
+  input_gdo_pin: ${uart_rx_pin}
+  output_gdo_pin: ${uart_tx_pin}
+  input_obst_pin: ${input_obst_pin}
+  on_sync_failed:
+    then:
+      - homeassistant.action:
+          action: persistent_notification.create
+          data:
+            title: "${friendly_name} sync failed"
+            message: "Failed to communicate with garage opener on startup."
+            notification_id: "esphome_${name}_sync_failed"
+
+api:
+  actions:
+    - action: wipe_devices_from_gdo_memory
+      variables:
+        devices_to_wipe: string
+      then:
+        - lambda: !lambda |-
+            id(gdo).clear_paired_devices(devices_to_wipe);
+
+sensor:
+  - platform: ratgdo
+    id: gdo_openings
+    type: openings
+    entity_category: diagnostic
+    name: "Openings"
+    unit_of_measurement: "openings"
+    icon: mdi:open-in-app
+  - platform: ratgdo
+    id: gdo_paired_devices_total
+    type: paired_devices_total
+    entity_category: diagnostic
+    name: "Paired Devices"
+    icon: mdi:remote
+
+lock:
+  - platform: ratgdo
+    id: gdo_lock_remotes
+    name: "Lock remotes"
+
+switch:
+  - platform: gpio
+    id: gdo_status_door
+    internal: true
+    pin:
+      number: ${status_door_pin}  # output door status, HIGH for open, LOW for closed
+      mode:
+        output: true
+    name: "Status door"
+    entity_category: diagnostic
+  - platform: gpio
+    id: gdo_status_obstruction
+    internal: true
+    pin:
+      number: ${status_obstruction_pin}  # output for obstruction status, HIGH for obstructed, LOW for clear
+      mode:
+        output: true
+    name: "Status obstruction"
+    entity_category: diagnostic
+  - platform: ratgdo
+    id: gdo_learn
+    type: learn
+    name: "Learn"
+    icon: mdi:plus-box
+    entity_category: config
+
+binary_sensor:
+  - platform: ratgdo
+    type: motion
+    id: gdo_motion
+    name: "Motion"
+    device_class: motion
+  - platform: ratgdo
+    type: obstruction
+    id: gdo_obstruction
+    name: "Obstruction"
+    device_class: problem
+    on_press:
+      - switch.turn_on: gdo_status_obstruction
+    on_release:
+      - switch.turn_off: gdo_status_obstruction
+  - platform: ratgdo
+    type: button
+    id: gdo_button
+    name: "Button"
+    entity_category: diagnostic
+  - platform: ratgdo
+    type: motor
+    id: gdo_motor
+    name: "Motor"
+    device_class: running
+    entity_category: diagnostic
+  - platform: gpio
+    id: gdo_dry_contact_open
+    pin:
+      number: ${dry_contact_open_pin}  # dry contact for opening door
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    name: "Dry contact open"
+    entity_category: diagnostic
+    filters:
+      - delayed_on_off: 500ms
+    on_press:
+      then:
+        script.execute: gdo_dry_contact_door_control
+  - platform: gpio
+    id: gdo_dry_contact_close
+    pin:
+      number: ${dry_contact_close_pin}  # dry contact for closing door
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    name: "Dry contact close"
+    entity_category: diagnostic
+    filters:
+      - delayed_on_off: 500ms
+    on_press:
+      then:
+        script.execute: gdo_dry_contact_door_control
+  - platform: gpio
+    id: gdo_dry_contact_light
+    pin:
+      number: ${dry_contact_light_pin}  # dry contact for triggering light (no discrete light commands, so toggle only)
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    name: "Dry contact light"
+    entity_category: diagnostic
+    filters:
+      - delayed_on_off: 500ms
+    on_press:
+      - light.toggle: gdo_light
+
+script:
+  - id: gdo_dry_contact_door_control
+    then:
+      - delay: 0.1s
+      - if:
+          condition:
+            and:
+              - binary_sensor.is_on: gdo_dry_contact_close
+              - binary_sensor.is_on: gdo_dry_contact_open
+          then:
+            - cover.toggle: gdo_garage_door
+      - if:
+          condition:
+            and:
+              - binary_sensor.is_off: gdo_dry_contact_close
+              - binary_sensor.is_on: gdo_dry_contact_open
+          then:
+            - cover.open: gdo_garage_door
+      - if:
+          condition:
+            and:
+              - binary_sensor.is_on: gdo_dry_contact_close
+              - binary_sensor.is_off: gdo_dry_contact_open
+          then:
+            - cover.close: gdo_garage_door
+
+number:
+  - platform: ratgdo
+    id: gdo_rolling_code_counter
+    type: rolling_code_counter
+    entity_category: config
+    name: "Rolling code counter"
+    mode: box
+    unit_of_measurement: "codes"
+  - platform: ratgdo
+    id: gdo_opening_duration
+    type: opening_duration
+    entity_category: config
+    name: "Opening duration"
+    unit_of_measurement: "s"
+  - platform: ratgdo
+    id: gdo_closing_duration
+    type: closing_duration
+    entity_category: config
+    name: "Closing duration"
+    unit_of_measurement: "s"
+  - platform: ratgdo
+    id: gdo_client_id
+    type: client_id
+    entity_category: config
+    name: "Client ID"
+    mode: box
+
+cover:
+  - platform: ratgdo
+    id: gdo_garage_door
+    device_class: garage
+    name: None                 # the device's main entity (upstream: "Door")
+    on_closed:
+      - switch.turn_off: gdo_status_door
+    on_opened:
+      - switch.turn_on: gdo_status_door
+
+light:
+  - platform: ratgdo
+    id: gdo_light
+    name: "Light"
+
+button:
+  - platform: safe_mode
+    id: gdo_safe_mode
+    name: "Safe mode boot"
+    entity_category: diagnostic
+  - platform: template
+    id: gdo_query_status
+    entity_category: diagnostic
+    name: "Query status"
+    on_press:
+      then:
+        lambda: !lambda |-
+          id(gdo).query_status();
+  - platform: template
+    id: gdo_query_openings
+    name: "Query openings"
+    entity_category: diagnostic
+    on_press:
+      then:
+        lambda: !lambda |-
+          id(gdo).query_openings();
+  - platform: template
+    id: gdo_sync
+    name: "Sync"
+    entity_category: diagnostic
+    on_press:
+      then:
+        lambda: !lambda |-
+          id(gdo).sync();
+  - platform: template
+    id: gdo_toggle_door
+    name: "Toggle door"
+    on_press:
+      then:
+        lambda: !lambda |-
+          id(gdo).door_toggle();

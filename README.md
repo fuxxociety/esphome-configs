@@ -20,9 +20,12 @@ common/                    shared building blocks
   light/                     shared bulb behaviour, PWM channel, …
   effects/                   one file per light effect; color / white / addressable lists
   bluetooth/proxy.yaml       BLE tracker + Bluetooth proxy (ESP32)
-components/                local external components (pedestal fan, vendored)
+components/                local external components (pedestal fan, ratgdo + its libraries; vendored)
 naming/                    naming.yaml (generated), overrides.yaml (hand decisions), rename-map.csv
-reference/                 old configs kept for reference only (not built)
+diagnostics/               wifi-diag firmware for the Wi-Fi debugging tools (USB test board, not a fleet device)
+legacy/                    the pre-refactor configs and their includes, out of the dashboard. They do NOT compile on
+                           ESPHome 2026; rollback images are built from them with each device's old ESPHome version
+reference/                 configs and includes recovered from backups, reference only (not built)
 ```
 
 | Template | Devices |
@@ -39,6 +42,8 @@ reference/                 old configs kept for reference only (not built)
 | `enbrighten/wfd4105.yaml`, `sengled/b1c-nb7.yaml` | lamp plugs |
 | `diy/esp32-pwm-5ch.yaml` | grow lights |
 | `diy/esp32-ir-pedestal-fan.yaml` | IR pedestal fan bridge |
+| `ratgdo/v25i.yaml` | ratgdo v2.5i garage door controller (Security+ 2.0) |
+| `ratgdo/v25i.yaml` | ratgdo v2.5i/v2.52i/v2.53i garage door controller (ESP8266, Security+ 2.0) |
 
 ## Conventions
 
@@ -49,7 +54,7 @@ reference/                 old configs kept for reference only (not built)
   Every event a device sends carries it as `devicename` and `room`.
 - A device file sets `name`, `friendly_name`, `room_key` and includes **one** template. Anything else in it (pins,
   calibration, `use_address`) is a per-unit fact and gets a comment.
-- Secrets only via `!secret` (keys in [secrets.example.yaml](secrets.example.yaml)); never inline.
+- Secrets only via `!secret` (keys in [secrets.yaml.example](secrets.yaml.example)); never inline.
 
 ## Adding or renaming a device
 

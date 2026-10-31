@@ -1,0 +1,7 @@
+substitutions:
+  name: cover-garage
+  friendly_name: Garage Door
+  room_key: garage_door
+
+packages:
+  device: !include templates/ratgdo/v25i.yaml

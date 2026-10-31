@@ -7,8 +7,8 @@ devices:
   hostname: aquarium-light-outlet
   class: plug_light
   configs:
-  - aquarium-plug.yaml
-  keep_config: aquarium-plug.yaml
+  - legacy/aquarium-plug.yaml
+  keep_config: legacy/aquarium-plug.yaml
   new_hostname: plug-craftroom-wash-1
   friendly_name: Craft Room Wash 1
   room_key: craftroom_wash
@@ -20,8 +20,8 @@ devices:
   hostname: bulb-diningroom-1
   class: bulb
   configs:
-  - bulb-diningroom-1.yaml
-  keep_config: bulb-diningroom-1.yaml
+  - legacy/bulb-diningroom-1.yaml
+  keep_config: legacy/bulb-diningroom-1.yaml
   new_hostname: bulb-diningroom-1
   friendly_name: Dining Room 1
   room_key: diningroom
@@ -33,8 +33,8 @@ devices:
   hostname: bulb-diningroom-2
   class: bulb
   configs:
-  - bulb-diningroom-2.yaml
-  keep_config: bulb-diningroom-2.yaml
+  - legacy/bulb-diningroom-2.yaml
+  keep_config: legacy/bulb-diningroom-2.yaml
   new_hostname: bulb-diningroom-2
   friendly_name: Dining Room 2
   room_key: diningroom
@@ -46,8 +46,8 @@ devices:
   hostname: bulb-diningroom-3
   class: bulb
   configs:
-  - bulb-diningroom-3.yaml
-  keep_config: bulb-diningroom-3.yaml
+  - legacy/bulb-diningroom-3.yaml
+  keep_config: legacy/bulb-diningroom-3.yaml
   new_hostname: bulb-diningroom-3
   friendly_name: Dining Room 3
   room_key: diningroom
@@ -59,8 +59,8 @@ devices:
   hostname: bulb-diningroom-4
   class: bulb
   configs:
-  - bulb-diningroom-4.yaml
-  keep_config: bulb-diningroom-4.yaml
+  - legacy/bulb-diningroom-4.yaml
+  keep_config: legacy/bulb-diningroom-4.yaml
   new_hostname: bulb-diningroom-4
   friendly_name: Dining Room 4
   room_key: diningroom
@@ -72,8 +72,8 @@ devices:
   hostname: bulb-diningroom-5
   class: bulb
   configs:
-  - bulb-diningroom-5.yaml
-  keep_config: bulb-diningroom-5.yaml
+  - legacy/bulb-diningroom-5.yaml
+  keep_config: legacy/bulb-diningroom-5.yaml
   new_hostname: bulb-diningroom-5
   friendly_name: Dining Room 5
   room_key: diningroom
@@ -99,8 +99,8 @@ devices:
   hostname: bulb-frontporch-1
   class: bulb
   configs:
-  - bulb-frontporch-1.yaml
-  keep_config: bulb-frontporch-1.yaml
+  - legacy/bulb-frontporch-1.yaml
+  keep_config: legacy/bulb-frontporch-1.yaml
   new_hostname: bulb-frontporch-1
   friendly_name: Front Porch 1
   room_key: frontporch
@@ -113,8 +113,8 @@ devices:
   hostname: bulb-livingroom-shelf
   class: bulb
   configs:
-  - bulb-livingroom-shelf.yaml
-  keep_config: bulb-livingroom-shelf.yaml
+  - legacy/bulb-livingroom-shelf.yaml
+  keep_config: legacy/bulb-livingroom-shelf.yaml
   new_hostname: bulb-livingroom-shelf
   friendly_name: Living Room Shelf
   room_key: livingroom_shelf
@@ -127,9 +127,9 @@ devices:
   hostname: bulb-masterbath-toilet
   class: bulb
   configs:
-  - bulb-masterbath-toilet.yaml
-  - masterbath-toilet-bulb.yaml
-  keep_config: bulb-masterbath-toilet.yaml
+  - legacy/bulb-masterbath-toilet.yaml
+  - legacy/masterbath-toilet-bulb.yaml
+  keep_config: legacy/bulb-masterbath-toilet.yaml
   new_hostname: bulb-masterbath-toilet-1
   friendly_name: Master Bath Toilet 1
   room_key: masterbath_toilet
@@ -141,8 +141,8 @@ devices:
   hostname: bulb-masterbed-1
   class: bulb
   configs:
-  - bulb-masterbed-1.yaml
-  keep_config: bulb-masterbed-1.yaml
+  - legacy/bulb-masterbed-1.yaml
+  keep_config: legacy/bulb-masterbed-1.yaml
   new_hostname: bulb-masterbed-1
   friendly_name: Master Bed 1
   room_key: masterbed
@@ -154,8 +154,8 @@ devices:
   hostname: bulb-masterbed-2
   class: bulb
   configs:
-  - bulb-masterbed-2.yaml
-  keep_config: bulb-masterbed-2.yaml
+  - legacy/bulb-masterbed-2.yaml
+  keep_config: legacy/bulb-masterbed-2.yaml
   new_hostname: bulb-masterbed-2
   friendly_name: Master Bed 2
   room_key: masterbed
@@ -167,8 +167,8 @@ devices:
   hostname: bulb-officeceiling-2
   class: bulb
   configs:
-  - bulb-officeceiling-2.yaml
-  keep_config: bulb-officeceiling-2.yaml
+  - legacy/bulb-officeceiling-2.yaml
+  keep_config: legacy/bulb-officeceiling-2.yaml
   new_hostname: bulb-office-2
   friendly_name: Office 2
   room_key: officeceiling
@@ -181,9 +181,8 @@ devices:
   hostname: switch-craftroom-closet
   class: ss01s
   configs:
-  - craftroom-closet-light-switch.yaml
-  - switch-craftroom-closet.yaml
-  keep_config: craftroom-closet-light-switch.yaml
+  - legacy/craftroom-closet-light-switch.yaml
+  keep_config: legacy/craftroom-closet-light-switch.yaml
   new_hostname: switch-craftroom-closet
   friendly_name: Craft Room Closet
   room_key: craftroom_closet
@@ -195,8 +194,8 @@ devices:
   hostname: dimmer-craftroom-ceiling
   class: ds01c
   configs:
-  - craftroom-ceiling-fan-switch.yaml
-  keep_config: craftroom-ceiling-fan-switch.yaml
+  - legacy/craftroom-ceiling-fan-switch.yaml
+  keep_config: legacy/craftroom-ceiling-fan-switch.yaml
   new_hostname: fan-craftroom-ceiling
   friendly_name: Craft Room Ceiling
   room_key: craftroom_ceiling
@@ -208,9 +207,9 @@ devices:
   hostname: dimmer-gameroom-ceiling
   class: ds01c
   configs:
-  - dimmer-gameroom-ceiling.yaml
-  - gameroom-ceiling-fan.yaml
-  keep_config: dimmer-gameroom-ceiling.yaml
+  - legacy/dimmer-gameroom-ceiling.yaml
+  - legacy/gameroom-ceiling-fan.yaml
+  keep_config: legacy/dimmer-gameroom-ceiling.yaml
   new_hostname: fan-gameroom-ceiling
   friendly_name: Game Room Ceiling
   room_key: gameroom_ceiling
@@ -222,9 +221,9 @@ devices:
   hostname: dimmer-livingroom-ceiling
   class: ds01c
   configs:
-  - dimmer-livingroom-ceiling.yaml
-  - livingroom-ceiling-fan.yaml
-  keep_config: dimmer-livingroom-ceiling.yaml
+  - legacy/dimmer-livingroom-ceiling.yaml
+  - legacy/livingroom-ceiling-fan.yaml
+  keep_config: legacy/dimmer-livingroom-ceiling.yaml
   new_hostname: fan-livingroom-ceiling
   friendly_name: Living Room Ceiling
   room_key: livingroom_ceiling
@@ -237,9 +236,9 @@ devices:
   hostname: dimmer-mason-ceiling
   class: ds01c
   configs:
-  - dimmer-mason-ceiling.yaml
-  - mason-ceiling-fan.yaml
-  keep_config: dimmer-mason-ceiling.yaml
+  - legacy/dimmer-mason-ceiling.yaml
+  - legacy/mason-ceiling-fan.yaml
+  keep_config: legacy/dimmer-mason-ceiling.yaml
   new_hostname: fan-mason-ceiling
   friendly_name: Mason Ceiling
   room_key: mason_ceiling
@@ -251,9 +250,9 @@ devices:
   hostname: dimmer-masterbed-ceiling
   class: ds01c
   configs:
-  - dimmer-masterbed-ceiling.yaml
+  - legacy/dimmer-masterbed-ceiling.yaml
   - reference/masterbed-ceiling-fan.yaml
-  keep_config: dimmer-masterbed-ceiling.yaml
+  keep_config: legacy/dimmer-masterbed-ceiling.yaml
   new_hostname: fan-masterbed-ceiling
   friendly_name: Master Bed Ceiling
   room_key: masterbed_ceiling
@@ -265,8 +264,8 @@ devices:
   hostname: dimmer-thomas-ceiling
   class: ds01c
   configs:
-  - dimmer-thomas-ceiling.yaml
-  keep_config: dimmer-thomas-ceiling.yaml
+  - legacy/dimmer-thomas-ceiling.yaml
+  keep_config: legacy/dimmer-thomas-ceiling.yaml
   new_hostname: fan-thomas-ceiling
   friendly_name: Thomas Ceiling
   room_key: thomas_ceiling
@@ -278,8 +277,8 @@ devices:
   hostname: downstairs-3w-light-switch
   class: 3way
   configs:
-  - downstairs-stairwell.yaml
-  keep_config: downstairs-stairwell.yaml
+  - legacy/downstairs-stairwell.yaml
+  keep_config: legacy/downstairs-stairwell.yaml
   new_hostname: switch-downstairs-stairwell
   friendly_name: Downstairs Stairwell
   room_key: downstairs
@@ -291,8 +290,8 @@ devices:
   hostname: fan-mbrpedestal
   class: fan
   configs:
-  - fan-mbrpedestal.yaml
-  keep_config: fan-mbrpedestal.yaml
+  - legacy/fan-mbrpedestal.yaml
+  keep_config: legacy/fan-mbrpedestal.yaml
   new_hostname: fan-masterbed-pedestal
   friendly_name: Master Bed Pedestal
   room_key: masterbed_pedestal
@@ -317,9 +316,9 @@ devices:
   hostname: frontporch
   class: ss01s
   configs:
-  - front-porch.yaml
-  - frontporch-minimal.yaml
-  keep_config: front-porch.yaml
+  - legacy/front-porch.yaml
+  - legacy/frontporch-minimal.yaml
+  keep_config: legacy/front-porch.yaml
   new_hostname: switch-frontporch
   friendly_name: Front Porch
   room_key: frontporch
@@ -345,8 +344,8 @@ devices:
   hostname: growlight
   class: light
   configs:
-  - livingroom-growlights.yaml
-  keep_config: livingroom-growlights.yaml
+  - legacy/livingroom-growlights.yaml
+  keep_config: legacy/livingroom-growlights.yaml
   new_hostname: light-livingroom-grow
   friendly_name: Living Room Grow
   room_key: livingroom_grow
@@ -359,8 +358,8 @@ devices:
   hostname: kauf-plug-44ed55
   class: plug_light
   configs:
-  - kauf-plug-44ed55.yaml
-  keep_config: kauf-plug-44ed55.yaml
+  - legacy/kauf-plug-44ed55.yaml
+  keep_config: legacy/kauf-plug-44ed55.yaml
   new_hostname: plug-craftroom-wash-2
   friendly_name: Craft Room Wash 2
   room_key: craftroom_wash
@@ -372,8 +371,8 @@ devices:
   hostname: switch-masterbath-closet
   class: ss01s
   configs:
-  - masterbath-closet.yaml
-  keep_config: masterbath-closet.yaml
+  - legacy/masterbath-closet.yaml
+  keep_config: legacy/masterbath-closet.yaml
   new_hostname: switch-masterbath-closet
   friendly_name: Master Bath Closet
   room_key: masterbath_closet
@@ -399,8 +398,8 @@ devices:
   hostname: masterbath-tub
   class: bulb
   configs:
-  - masterbath-tub.yaml
-  keep_config: masterbath-tub.yaml
+  - legacy/masterbath-tub.yaml
+  keep_config: legacy/masterbath-tub.yaml
   new_hostname: bulb-masterbath-tub
   friendly_name: Master Bath Tub
   room_key: masterbath_shower
@@ -412,8 +411,8 @@ devices:
   hostname: masterbed-light-switch
   class: ss01s
   configs:
-  - masterbed-light-switch.yaml
-  keep_config: masterbed-light-switch.yaml
+  - legacy/masterbed-light-switch.yaml
+  keep_config: legacy/masterbed-light-switch.yaml
   new_hostname: switch-masterbed
   friendly_name: Master Bed
   room_key: masterbed
@@ -425,8 +424,8 @@ devices:
   hostname: masterbedroom-shelf-light-bulb
   class: bulb
   configs:
-  - masterbed-shelf.yaml
-  keep_config: masterbed-shelf.yaml
+  - legacy/masterbed-shelf.yaml
+  keep_config: legacy/masterbed-shelf.yaml
   new_hostname: bulb-masterbed-shelf
   friendly_name: Master Bed Shelf
   room_key: masterbed_shelf
@@ -439,8 +438,8 @@ devices:
   hostname: office-closet-light-switch
   class: ss01s
   configs:
-  - office-closet.yaml
-  keep_config: office-closet.yaml
+  - legacy/office-closet.yaml
+  keep_config: legacy/office-closet.yaml
   new_hostname: switch-office-closet
   friendly_name: Office Closet
   room_key: office_closet
@@ -453,8 +452,8 @@ devices:
   hostname: office-light-switch
   class: ss01s
   configs:
-  - office-ceiling-light.yaml
-  keep_config: office-ceiling-light.yaml
+  - legacy/office-ceiling-light.yaml
+  keep_config: legacy/office-ceiling-light.yaml
   new_hostname: switch-office
   friendly_name: Office
   room_key: officeceiling
@@ -466,8 +465,8 @@ devices:
   hostname: plug-dishwasher
   class: plug_appliance
   configs:
-  - plug-dishwasher.yaml
-  keep_config: plug-dishwasher.yaml
+  - legacy/plug-dishwasher.yaml
+  keep_config: legacy/plug-dishwasher.yaml
   new_hostname: plug-dishwasher
   friendly_name: Dishwasher
   room_key: dishwasher
@@ -479,8 +478,8 @@ devices:
   hostname: plug-dryer
   class: plug_appliance
   configs:
-  - plug-dryer.yaml
-  keep_config: plug-dryer.yaml
+  - legacy/plug-dryer.yaml
+  keep_config: legacy/plug-dryer.yaml
   new_hostname: plug-dryer
   friendly_name: Dryer
   room_key: dryer
@@ -492,8 +491,8 @@ devices:
   hostname: plug-washingmachine
   class: plug_appliance
   configs:
-  - plug-washingmachine.yaml
-  keep_config: plug-washingmachine.yaml
+  - legacy/plug-washingmachine.yaml
+  keep_config: legacy/plug-washingmachine.yaml
   new_hostname: plug-washingmachine
   friendly_name: WashingMachine
   room_key: washingmachine
@@ -505,9 +504,8 @@ devices:
   hostname: switch-backporch
   class: ss01s
   configs:
-  - backporch-light-switch.yaml
-  - switch-backporch.yaml
-  keep_config: backporch-light-switch.yaml
+  - legacy/backporch-light-switch.yaml
+  keep_config: legacy/backporch-light-switch.yaml
   new_hostname: switch-backporch
   friendly_name: Back Porch
   room_key: backporch
@@ -519,9 +517,8 @@ devices:
   hostname: switch-breakfastnook
   class: ss01s
   configs:
-  - breakfastnook-ceiling-light-switch.yaml
-  - switch-breakfastnook.yaml
-  keep_config: breakfastnook-ceiling-light-switch.yaml
+  - legacy/breakfastnook-ceiling-light-switch.yaml
+  keep_config: legacy/breakfastnook-ceiling-light-switch.yaml
   new_hostname: switch-breakfastnook
   friendly_name: Breakfast Nook
   room_key: breakfastnook
@@ -533,8 +530,8 @@ devices:
   hostname: switch-craftroom
   class: ss01s
   configs:
-  - craftroom-light-switch.yaml
-  keep_config: craftroom-light-switch.yaml
+  - legacy/craftroom-light-switch.yaml
+  keep_config: legacy/craftroom-light-switch.yaml
   new_hostname: switch-craftroom
   friendly_name: Craft Room
   room_key: craftroom
@@ -547,9 +544,8 @@ devices:
   hostname: switch-diningroom
   class: ss01s
   configs:
-  - diningroom-ceiling-light-switch.yaml
-  - switch-diningroom.yaml
-  keep_config: diningroom-ceiling-light-switch.yaml
+  - legacy/diningroom-ceiling-light-switch.yaml
+  keep_config: legacy/diningroom-ceiling-light-switch.yaml
   new_hostname: switch-diningroom
   friendly_name: Dining Room
   room_key: diningroom
@@ -561,9 +557,8 @@ devices:
   hostname: switch-downbath
   class: ss01s
   configs:
-  - downstairs-bathroom-vanity.yaml
-  - switch-downbath.yaml
-  keep_config: downstairs-bathroom-vanity.yaml
+  - legacy/downstairs-bathroom-vanity.yaml
+  keep_config: legacy/downstairs-bathroom-vanity.yaml
   new_hostname: switch-downbath
   friendly_name: Downstairs Bath
   room_key: downbath
@@ -575,8 +570,8 @@ devices:
   hostname: switch-downbath-vent
   class: ss01s
   configs:
-  - switch-downbath-vent.yaml
-  keep_config: switch-downbath-vent.yaml
+  - legacy/switch-downbath-vent.yaml
+  keep_config: legacy/switch-downbath-vent.yaml
   new_hostname: fan-downbath-vent
   friendly_name: Downstairs Bath Vent
   room_key: downbath_vent
@@ -588,9 +583,8 @@ devices:
   hostname: switch-fireplace
   class: ss01s
   configs:
-  - livingroom-fireplace.yaml
-  - switch-fireplace.yaml
-  keep_config: livingroom-fireplace.yaml
+  - legacy/livingroom-fireplace.yaml
+  keep_config: legacy/livingroom-fireplace.yaml
   new_hostname: switch-fireplace
   friendly_name: Fireplace
   room_key: fireplace
@@ -602,9 +596,8 @@ devices:
   hostname: switch-gameroom
   class: ss01s
   configs:
-  - gameroom-ceiling-light.yaml
-  - switch-gameroom.yaml
-  keep_config: gameroom-ceiling-light.yaml
+  - legacy/gameroom-ceiling-light.yaml
+  keep_config: legacy/gameroom-ceiling-light.yaml
   new_hostname: switch-gameroom
   friendly_name: Game Room
   room_key: gameroom
@@ -616,9 +609,8 @@ devices:
   hostname: switch-garage
   class: ss01s
   configs:
-  - garage.yaml
-  - switch-garage.yaml
-  keep_config: garage.yaml
+  - legacy/garage.yaml
+  keep_config: legacy/garage.yaml
   new_hostname: switch-garage
   friendly_name: Garage
   room_key: garage
@@ -630,9 +622,9 @@ devices:
   hostname: switch-kitchen
   class: ss01s
   configs:
-  - switch-kitchen.yaml
+  - legacy/switch-kitchen.yaml
   - reference/kitchen.yaml
-  keep_config: switch-kitchen.yaml
+  keep_config: legacy/switch-kitchen.yaml
   new_hostname: switch-kitchen
   friendly_name: Kitchen
   room_key: kitchen
@@ -644,9 +636,8 @@ devices:
   hostname: switch-laundryroom
   class: ss01s
   configs:
-  - laundryroom.yaml
-  - switch-laundryroom.yaml
-  keep_config: laundryroom.yaml
+  - legacy/laundryroom.yaml
+  keep_config: legacy/laundryroom.yaml
   new_hostname: switch-laundryroom
   friendly_name: Laundry Room
   room_key: laundryroom
@@ -658,9 +649,8 @@ devices:
   hostname: switch-livingroom
   class: ss01s
   configs:
-  - livingroom-ceiling-light.yaml
-  - switch-livingroom.yaml
-  keep_config: livingroom-ceiling-light.yaml
+  - legacy/livingroom-ceiling-light.yaml
+  keep_config: legacy/livingroom-ceiling-light.yaml
   new_hostname: switch-livingroom
   friendly_name: Living Room
   room_key: livingroom
@@ -673,9 +663,9 @@ devices:
   hostname: switch-mason
   class: ss01s
   configs:
-  - switch-mason.yaml
+  - legacy/switch-mason.yaml
   - reference/mason-ceiling-light.yaml
-  keep_config: switch-mason.yaml
+  keep_config: legacy/switch-mason.yaml
   new_hostname: switch-mason
   friendly_name: Mason
   room_key: mason
@@ -687,8 +677,8 @@ devices:
   hostname: switch-masterbath-shower
   class: ss01s
   configs:
-  - masterbath-shower.yaml
-  keep_config: masterbath-shower.yaml
+  - legacy/masterbath-shower.yaml
+  keep_config: legacy/masterbath-shower.yaml
   new_hostname: switch-masterbath-shower
   friendly_name: Master Bath Shower
   room_key: masterbath_shower
@@ -700,9 +690,9 @@ devices:
   hostname: switch-masterbath-shower-vent
   class: ss01s
   configs:
-  - masterbath-shower-fan.yaml
-  - switch-masterbath-shower-vent.yaml
-  keep_config: masterbath-shower-fan.yaml
+  - legacy/masterbath-shower-fan.yaml
+  - legacy/switch-masterbath-shower-vent.yaml
+  keep_config: legacy/masterbath-shower-fan.yaml
   new_hostname: fan-masterbath-shower-vent
   friendly_name: Master Bath Shower Vent
   room_key: masterbath_shower_vent
@@ -714,9 +704,8 @@ devices:
   hostname: switch-masterbath-toilet
   class: ss01s
   configs:
-  - masterbath-toilet.yaml
-  - switch-masterbath-toilet.yaml
-  keep_config: masterbath-toilet.yaml
+  - legacy/masterbath-toilet.yaml
+  keep_config: legacy/masterbath-toilet.yaml
   new_hostname: switch-masterbath-toilet
   friendly_name: Master Bath Toilet
   room_key: masterbath_toilet
@@ -728,9 +717,9 @@ devices:
   hostname: switch-masterbath-toilet-vent
   class: ss01s
   configs:
-  - masterbath-toilet-fan.yaml
-  - switch-masterbath-toilet-vent.yaml
-  keep_config: masterbath-toilet-fan.yaml
+  - legacy/masterbath-toilet-fan.yaml
+  - legacy/switch-masterbath-toilet-vent.yaml
+  keep_config: legacy/masterbath-toilet-fan.yaml
   new_hostname: fan-masterbath-toilet-vent
   friendly_name: Master Bath Toilet Vent
   room_key: masterbath_toilet_vent
@@ -742,9 +731,8 @@ devices:
   hostname: switch-masterbath-vanity
   class: ss01s
   configs:
-  - masterbath-vanity.yaml
-  - switch-masterbath-vanity.yaml
-  keep_config: masterbath-vanity.yaml
+  - legacy/masterbath-vanity.yaml
+  keep_config: legacy/masterbath-vanity.yaml
   new_hostname: switch-masterbath-vanity
   friendly_name: Master Bath Vanity
   room_key: masterbath_vanity
@@ -756,7 +744,7 @@ devices:
   hostname: switch-office-fan
   class: ds01c
   configs:
-  - s-office-fan.yaml
+  - legacy/s-office-fan.yaml
   keep_config: dimmer-office-ceiling.yaml
   new_hostname: fan-office-ceiling
   friendly_name: Office Ceiling
@@ -770,9 +758,9 @@ devices:
   hostname: switch-thomas
   class: ss01s
   configs:
-  - switch-thomas.yaml
-  - thomas-ceiling-light.yaml
-  keep_config: switch-thomas.yaml
+  - legacy/switch-thomas.yaml
+  - legacy/thomas-ceiling-light.yaml
+  keep_config: legacy/switch-thomas.yaml
   new_hostname: switch-thomas
   friendly_name: Thomas
   room_key: thomas
@@ -784,9 +772,9 @@ devices:
   hostname: switch-upbath-toilet
   class: ss01s
   configs:
-  - switch-upbath-toilet.yaml
-  - upstairs-bathroom-toilet.yaml
-  keep_config: switch-upbath-toilet.yaml
+  - legacy/switch-upbath-toilet.yaml
+  - legacy/upstairs-bathroom-toilet.yaml
+  keep_config: legacy/switch-upbath-toilet.yaml
   new_hostname: switch-upbath-toilet
   friendly_name: Upstairs Bath Toilet
   room_key: upbath_toilet
@@ -798,8 +786,8 @@ devices:
   hostname: switch-upbath-vanity
   class: ss01s
   configs:
-  - upstairs-bathroom-vanity.yaml
-  keep_config: upstairs-bathroom-vanity.yaml
+  - legacy/upstairs-bathroom-vanity.yaml
+  keep_config: legacy/upstairs-bathroom-vanity.yaml
   new_hostname: switch-upbath-vanity
   friendly_name: Upstairs Bath Vanity
   room_key: upbath_vanity
@@ -811,9 +799,9 @@ devices:
   hostname: switch-upbath-vent
   class: ss01s
   configs:
-  - switch-upbath-vent.yaml
-  - upstairs-bathroom-fan.yaml
-  keep_config: switch-upbath-vent.yaml
+  - legacy/switch-upbath-vent.yaml
+  - legacy/upstairs-bathroom-fan.yaml
+  keep_config: legacy/switch-upbath-vent.yaml
   new_hostname: fan-upbath-vent
   friendly_name: Upstairs Bath Vent
   room_key: upbath_vent
@@ -825,9 +813,9 @@ devices:
   hostname: switch-upstairs-hallway
   class: ss01s
   configs:
-  - switch-upstairs-hallway.yaml
-  - upstairs-hallway.yaml
-  keep_config: switch-upstairs-hallway.yaml
+  - legacy/switch-upstairs-hallway.yaml
+  - legacy/upstairs-hallway.yaml
+  keep_config: legacy/switch-upstairs-hallway.yaml
   new_hostname: switch-upstairs-hallway
   friendly_name: Upstairs Hallway
   room_key: upstairs_hallway
@@ -839,8 +827,8 @@ devices:
   hostname: thomas-closet-light-switch-1
   class: ss01s
   configs:
-  - thomas-closet.yaml
-  keep_config: thomas-closet.yaml
+  - legacy/thomas-closet.yaml
+  keep_config: legacy/thomas-closet.yaml
   new_hostname: switch-thomas-closet
   friendly_name: Thomas Closet
   room_key: thomas_closet
@@ -865,8 +853,8 @@ devices:
   hostname: bedroom-fan
   class: plug
   configs:
-  - test-switch-2.yaml
-  keep_config: test-switch-2.yaml
+  - legacy/test-switch-2.yaml
+  keep_config: legacy/test-switch-2.yaml
   new_hostname: bedroom-fan
   friendly_name: Bedroom Fan
   room_key: bedroom_fan
@@ -879,8 +867,8 @@ devices:
   hostname: blnan-bulb
   class: fixture
   configs:
-  - blnan-ceiling.yaml
-  keep_config: blnan-ceiling.yaml
+  - legacy/blnan-ceiling.yaml
+  keep_config: legacy/blnan-ceiling.yaml
   new_hostname: light-blnan-bulb
   friendly_name: Blnan Bulb
   room_key: blnan
@@ -894,8 +882,8 @@ devices:
   hostname: btproxy-livingroom
   class: proxy
   configs:
-  - btproxy-livingroom.yaml
-  keep_config: btproxy-livingroom.yaml
+  - legacy/btproxy-livingroom.yaml
+  keep_config: legacy/btproxy-livingroom.yaml
   new_hostname: btproxy-livingroom
   friendly_name: Livingroom Bluetooth Proxy
   room_key: btproxy_livingroom
@@ -908,8 +896,8 @@ devices:
   hostname: bulb-craftroom-1
   class: bulb
   configs:
-  - bulb-craftroom-1.yaml
-  keep_config: bulb-craftroom-1.yaml
+  - legacy/bulb-craftroom-1.yaml
+  keep_config: legacy/bulb-craftroom-1.yaml
   new_hostname: bulb-craftroom-1
   friendly_name: Craft Room 1
   room_key: craftroom
@@ -922,8 +910,8 @@ devices:
   hostname: bulb-livingroom-4
   class: bulb
   configs:
-  - bulb-livingroom-4.yaml
-  keep_config: bulb-livingroom-4.yaml
+  - legacy/bulb-livingroom-4.yaml
+  keep_config: legacy/bulb-livingroom-4.yaml
   new_hostname: bulb-livingroom-4
   friendly_name: Living Room 4
   room_key: livingroom
@@ -936,8 +924,8 @@ devices:
   hostname: bulb-livingroom-5
   class: bulb
   configs:
-  - bulb-livingroom-5.yaml
-  keep_config: bulb-livingroom-5.yaml
+  - legacy/bulb-livingroom-5.yaml
+  keep_config: legacy/bulb-livingroom-5.yaml
   new_hostname: bulb-livingroom-5
   friendly_name: Living Room 5
   room_key: livingroom
@@ -950,8 +938,8 @@ devices:
   hostname: bulb-livingroom-6
   class: bulb
   configs:
-  - bulb-livingroom-6.yaml
-  keep_config: bulb-livingroom-6.yaml
+  - legacy/bulb-livingroom-6.yaml
+  keep_config: legacy/bulb-livingroom-6.yaml
   new_hostname: bulb-livingroom-6
   friendly_name: Living Room 6
   room_key: livingroom
@@ -964,8 +952,8 @@ devices:
   hostname: bulb-masterbed-bedside
   class: bulb
   configs:
-  - bulb-masterbed-bedside.yaml
-  keep_config: bulb-masterbed-bedside.yaml
+  - legacy/bulb-masterbed-bedside.yaml
+  keep_config: legacy/bulb-masterbed-bedside.yaml
   new_hostname: bulb-masterbed-bedside
   friendly_name: Master Bed Bedside
   room_key: masterbed_bedside
@@ -978,8 +966,8 @@ devices:
   hostname: dimmer-office-ceiling
   class: ds01c
   configs:
-  - dimmer-office-ceiling.yaml
-  keep_config: dimmer-office-ceiling.yaml
+  - legacy/dimmer-office-ceiling.yaml
+  keep_config: legacy/dimmer-office-ceiling.yaml
   new_hostname: fan-office-ceiling
   friendly_name: Office Ceiling
   room_key: office_ceiling
@@ -992,8 +980,8 @@ devices:
   hostname: dimmer-office-ceiling-fan
   class: ds01c
   configs:
-  - office-ceiling-fan.yaml
-  keep_config: office-ceiling-fan.yaml
+  - legacy/office-ceiling-fan.yaml
+  keep_config: legacy/office-ceiling-fan.yaml
   new_hostname: fan-office-ceiling
   friendly_name: Office Ceiling
   room_key: office_ceiling_fan
@@ -1006,9 +994,9 @@ devices:
   hostname: dimmer-spare
   class: ds01c
   configs:
-  - dimmer-spare.yaml
-  - spare-ceiling-fan.yaml
-  keep_config: dimmer-spare.yaml
+  - legacy/dimmer-spare.yaml
+  - legacy/spare-ceiling-fan.yaml
+  keep_config: legacy/dimmer-spare.yaml
   new_hostname: fan-spare-ceiling
   friendly_name: Spare Ceiling
   room_key: spare
@@ -1022,8 +1010,8 @@ devices:
   hostname: fan-breadboard
   class: other
   configs:
-  - fan-breadboard.yaml
-  keep_config: fan-breadboard.yaml
+  - legacy/fan-breadboard.yaml
+  keep_config: legacy/fan-breadboard.yaml
   new_hostname: fan-breadboard
   friendly_name: breadboard
   room_key: breadboard
@@ -1036,8 +1024,8 @@ devices:
   hostname: front-entry-light-switch-2
   class: ss01s
   configs:
-  - front-entry-2.yaml
-  keep_config: front-entry-2.yaml
+  - legacy/front-entry-2.yaml
+  keep_config: legacy/front-entry-2.yaml
   new_hostname: switch-front-entry-light-switch-2
   friendly_name: Front Entry Light Switch 2
   room_key: front_entry
@@ -1051,8 +1039,8 @@ devices:
   hostname: front-entry-switch
   class: ss01s
   configs:
-  - test-switch.yaml
-  keep_config: test-switch.yaml
+  - legacy/test-switch.yaml
+  keep_config: legacy/test-switch.yaml
   new_hostname: switch-front-entry-switch
   friendly_name: Front Entry Switch
   room_key: front_entry
@@ -1066,8 +1054,8 @@ devices:
   hostname: kauf-bulb-302342
   class: bulb
   configs:
-  - kauf-bulb-302342.yaml
-  keep_config: kauf-bulb-302342.yaml
+  - legacy/kauf-bulb-302342.yaml
+  keep_config: legacy/kauf-bulb-302342.yaml
   new_hostname: bulb-unassigned-302342
   friendly_name: Unassigned 302342
   room_key: ''
@@ -1081,8 +1069,8 @@ devices:
   hostname: kauf-bulb-30288a
   class: bulb
   configs:
-  - kauf-bulb-30288a.yaml
-  keep_config: kauf-bulb-30288a.yaml
+  - legacy/kauf-bulb-30288a.yaml
+  keep_config: legacy/kauf-bulb-30288a.yaml
   new_hostname: bulb-unassigned-30288a
   friendly_name: Unassigned 30288a
   room_key: ''
@@ -1096,8 +1084,8 @@ devices:
   hostname: kauf-bulb-302e9a
   class: bulb
   configs:
-  - kauf-bulb-302e9a.yaml
-  keep_config: kauf-bulb-302e9a.yaml
+  - legacy/kauf-bulb-302e9a.yaml
+  keep_config: legacy/kauf-bulb-302e9a.yaml
   new_hostname: bulb-unassigned-302e9a
   friendly_name: Unassigned 302e9a
   room_key: ''
@@ -1111,8 +1099,8 @@ devices:
   hostname: kauf-bulb-304cc4
   class: bulb
   configs:
-  - kauf-bulb-304cc4.yaml
-  keep_config: kauf-bulb-304cc4.yaml
+  - legacy/kauf-bulb-304cc4.yaml
+  keep_config: legacy/kauf-bulb-304cc4.yaml
   new_hostname: bulb-unassigned-304cc4
   friendly_name: Unassigned 304cc4
   room_key: ''
@@ -1126,8 +1114,8 @@ devices:
   hostname: livingroom-1
   class: bulb
   configs:
-  - bulb-livingroom-1.yaml
-  keep_config: bulb-livingroom-1.yaml
+  - legacy/bulb-livingroom-1.yaml
+  keep_config: legacy/bulb-livingroom-1.yaml
   new_hostname: bulb-livingroom-1
   friendly_name: Living Room 1
   room_key: livingroom
@@ -1140,8 +1128,8 @@ devices:
   hostname: livingroom-2
   class: bulb
   configs:
-  - bulb-livingroom-2.yaml
-  keep_config: bulb-livingroom-2.yaml
+  - legacy/bulb-livingroom-2.yaml
+  keep_config: legacy/bulb-livingroom-2.yaml
   new_hostname: bulb-livingroom-2
   friendly_name: Living Room 2
   room_key: livingroom
@@ -1154,8 +1142,8 @@ devices:
   hostname: livingroom-3
   class: bulb
   configs:
-  - bulb-livingroom-3.yaml
-  keep_config: bulb-livingroom-3.yaml
+  - legacy/bulb-livingroom-3.yaml
+  keep_config: legacy/bulb-livingroom-3.yaml
   new_hostname: bulb-livingroom-3
   friendly_name: Living Room 3
   room_key: livingroom
@@ -1168,8 +1156,8 @@ devices:
   hostname: livingroom-spare
   class: bulb
   configs:
-  - bulb-livingroom-spare.yaml
-  keep_config: bulb-livingroom-spare.yaml
+  - legacy/bulb-livingroom-spare.yaml
+  keep_config: legacy/bulb-livingroom-spare.yaml
   new_hostname: bulb-livingroom-spare
   friendly_name: Living Room spare
   room_key: livingroom
@@ -1182,8 +1170,8 @@ devices:
   hostname: motion-livingroom
   class: sensor
   configs:
-  - motion-livingroom.yaml
-  keep_config: motion-livingroom.yaml
+  - legacy/motion-livingroom.yaml
+  keep_config: legacy/motion-livingroom.yaml
   new_hostname: motion-livingroom
   friendly_name: Motion-Livingroom
   room_key: livingroom
@@ -1196,8 +1184,8 @@ devices:
   hostname: motion-mason
   class: sensor
   configs:
-  - motion-mason.yaml
-  keep_config: motion-mason.yaml
+  - legacy/motion-mason.yaml
+  keep_config: legacy/motion-mason.yaml
   new_hostname: motion-mason
   friendly_name: Motion-Mason
   room_key: mason
@@ -1210,8 +1198,8 @@ devices:
   hostname: motion-masterbath
   class: sensor
   configs:
-  - motion-masterbath.yaml
-  keep_config: motion-masterbath.yaml
+  - legacy/motion-masterbath.yaml
+  keep_config: legacy/motion-masterbath.yaml
   new_hostname: motion-masterbath
   friendly_name: Motion-Masterbath
   room_key: masterbath
@@ -1224,8 +1212,8 @@ devices:
   hostname: motion-thomas
   class: sensor
   configs:
-  - motion-thomas.yaml
-  keep_config: motion-thomas.yaml
+  - legacy/motion-thomas.yaml
+  keep_config: legacy/motion-thomas.yaml
   new_hostname: motion-thomas
   friendly_name: Motion-Thomas
   room_key: thomas
@@ -1238,8 +1226,8 @@ devices:
   hostname: motion-upbath
   class: sensor
   configs:
-  - motion-upbath.yaml
-  keep_config: motion-upbath.yaml
+  - legacy/motion-upbath.yaml
+  keep_config: legacy/motion-upbath.yaml
   new_hostname: motion-upbath
   friendly_name: Motion-Upbath
   room_key: upbath
@@ -1252,8 +1240,8 @@ devices:
   hostname: plug-aquarium
   class: plug
   configs:
-  - plug-aquarium.yaml
-  keep_config: plug-aquarium.yaml
+  - legacy/plug-aquarium.yaml
+  keep_config: legacy/plug-aquarium.yaml
   new_hostname: plug-aquarium
   friendly_name: Aquarium
   room_key: aquarium
@@ -1266,8 +1254,8 @@ devices:
   hostname: plug-masterbedroom-fan
   class: other
   configs:
-  - plug-masterbedroom-fan.yaml
-  keep_config: plug-masterbedroom-fan.yaml
+  - legacy/plug-masterbedroom-fan.yaml
+  keep_config: legacy/plug-masterbedroom-fan.yaml
   new_hostname: plug-masterbedroom-fan
   friendly_name: masterbedroom-fan
   room_key: masterbedroom_fan
@@ -1280,8 +1268,8 @@ devices:
   hostname: switch-3w-upstairs
   class: 3way
   configs:
-  - switch-3w-upstairs.yaml
-  keep_config: switch-3w-upstairs.yaml
+  - legacy/switch-3w-upstairs.yaml
+  keep_config: legacy/switch-3w-upstairs.yaml
   new_hostname: switch-None-stairwell
   friendly_name: 3W Upstairs Stairwell
   room_key: upstairs
@@ -1295,8 +1283,8 @@ devices:
   hostname: switch-downbath-vent-fan
   class: ss01s
   configs:
-  - downstairs-bathroom-fan.yaml
-  keep_config: downstairs-bathroom-fan.yaml
+  - legacy/downstairs-bathroom-fan.yaml
+  keep_config: legacy/downstairs-bathroom-fan.yaml
   new_hostname: fan-downbath-vent
   friendly_name: Downstairs Bath Vent
   room_key: downbath_vent_fan
@@ -1306,25 +1294,11 @@ devices:
   - 'stale: will not use (retire list)'
 - ha_name: null
   mac: null
-  hostname: switch-frontporch
-  class: ss01s
-  configs:
-  - switch-frontporch.yaml
-  keep_config: switch-frontporch.yaml
-  new_hostname: switch-frontporch
-  friendly_name: Front Porch
-  room_key: frontporch
-  protect: false
-  live: false
-  flags:
-  - 'stale: will not use (retire list)'
-- ha_name: null
-  mac: null
   hostname: switch-garagesconce
   class: ss01s
   configs:
-  - switch-garagesconce.yaml
-  keep_config: switch-garagesconce.yaml
+  - legacy/switch-garagesconce.yaml
+  keep_config: legacy/switch-garagesconce.yaml
   new_hostname: switch-garage-sconce
   friendly_name: Garage Sconce
   room_key: garagesconce
@@ -1334,39 +1308,11 @@ devices:
   - 'stale: will not use (retire list)'
 - ha_name: null
   mac: null
-  hostname: switch-masterbed
-  class: ss01s
-  configs:
-  - switch-masterbed.yaml
-  keep_config: switch-masterbed.yaml
-  new_hostname: switch-masterbed
-  friendly_name: Master Bed
-  room_key: masterbed
-  protect: false
-  live: false
-  flags:
-  - 'stale: will not use (retire list)'
-- ha_name: null
-  mac: null
-  hostname: switch-office-closet
-  class: ss01s
-  configs:
-  - switch-office-closet.yaml
-  keep_config: switch-office-closet.yaml
-  new_hostname: switch-office-closet
-  friendly_name: Office Closet
-  room_key: office_closet
-  protect: false
-  live: false
-  flags:
-  - 'stale: will not use (retire list)'
-- ha_name: null
-  mac: null
   hostname: switch-officeceiling
   class: ss01s
   configs:
-  - switch-officeceiling.yaml
-  keep_config: switch-officeceiling.yaml
+  - legacy/switch-officeceiling.yaml
+  keep_config: legacy/switch-officeceiling.yaml
   new_hostname: switch-office
   friendly_name: Office
   room_key: officeceiling
@@ -1376,43 +1322,14 @@ devices:
   - 'stale: will not use (retire list)'
 - ha_name: null
   mac: null
-  hostname: switch-thomas-closet
-  class: ss01s
-  configs:
-  - switch-thomas-closet.yaml
-  keep_config: switch-thomas-closet.yaml
-  new_hostname: switch-thomas-closet
-  friendly_name: Thomas Closet
-  room_key: thomas_closet
-  protect: false
-  live: false
-  flags:
-  - 'stale: will not use (retire list)'
-- ha_name: null
-  mac: null
   hostname: thomas-ceiling-fan-switch
   class: ss01s
   configs:
-  - thomas-ceiling-fan.yaml
-  keep_config: thomas-ceiling-fan.yaml
+  - legacy/thomas-ceiling-fan.yaml
+  keep_config: legacy/thomas-ceiling-fan.yaml
   new_hostname: fan-thomas-ceiling
   friendly_name: Thomas Ceiling
   room_key: thomas_ceiling_fan
-  protect: false
-  live: false
-  flags:
-  - 'stale: will not use (retire list)'
-- ha_name: null
-  mac: null
-  hostname: wifi-diag
-  class: other
-  configs:
-  - wifi-diag-stairwell.yaml
-  - wifi-diag.yaml
-  keep_config: wifi-diag-stairwell.yaml
-  new_hostname: wifi-diag
-  friendly_name: wifi-diag
-  room_key: wifi_diag
   protect: false
   live: false
   flags:

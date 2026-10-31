@@ -50,5 +50,5 @@ jobs:
           python-version: "3.13"
       # Keep in step with ../requirements.txt in the tooling repo
       - run: pip install esphome==2026.10.1
-      - run: cp secrets.ci.yaml secrets.yaml
+      - run: cp .github/secrets.ci.yaml secrets.yaml
       - run: esphome config ${{ matrix.file }} > /dev/null

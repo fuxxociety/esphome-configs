@@ -10,21 +10,21 @@ __pycache__/
 
 # Local only, never published: old configs with inline secrets (replaced by the new layout; kept for rollback
 # builds until cut-over) and the nested Kauf clone
-/fan-breadboard.yaml
-/front-entry-2.yaml
-/front-porch.yaml
-/kauf-bulb-30288a.yaml
-/kauf-bulb-302e9a.yaml
-/kauf-bulb-304cc4.yaml
-/kauf-bulb-302342.yaml
-/livingroom-growlights.yaml
-/masterbed-shelf.yaml
-/office-ceiling-fan.yaml
-/office-closet.yaml
-/plug-masterbedroom-fan.yaml
-/test-switch-2.yaml
-/test-switch.yaml
-/fan-mbrpedestal.yaml
+/legacy/fan-breadboard.yaml
+/legacy/front-entry-2.yaml
+/legacy/front-porch.yaml
+/legacy/kauf-bulb-30288a.yaml
+/legacy/kauf-bulb-302e9a.yaml
+/legacy/kauf-bulb-304cc4.yaml
+/legacy/kauf-bulb-302342.yaml
+/legacy/livingroom-growlights.yaml
+/legacy/masterbed-shelf.yaml
+/legacy/office-ceiling-fan.yaml
+/legacy/office-closet.yaml
+/legacy/plug-masterbedroom-fan.yaml
+/legacy/test-switch-2.yaml
+/legacy/test-switch.yaml
+/legacy/fan-mbrpedestal.yaml
 /reference/garage-sconce.yaml
 /reference/masterbath-shower-fixture.yaml
 /kauf-rgbww-bulbs/

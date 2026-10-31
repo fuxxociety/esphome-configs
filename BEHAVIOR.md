@@ -261,6 +261,9 @@ With both keys present, the existing `Wall Switch …` automations resolve group
   - dropped: Monitoring Update Interval (fixed 10 s), Boot State, Button Config, Debounce Time, the 30 s force-AP hold
   - `binary_sensor.<x>_device_in_use`, `sensor.<x>_power` and `_total_daily_energy` keep their ids exactly.
 - `fan.fan_mbrpedestal_pedestal_fan` is used by scripts and dashboards, so its id is kept.
+- **Garage door** (`cover-garage`, ratgdo v2.5i, Security+ 2.0, added 2026-10-31): the door is the device's main entity
+  (`cover.garage_door`); light, lock remotes, motion, obstruction and the dry contacts as upstream ratgdo. Vendored
+  component and libraries in `components/` (ratgdo, secplus, espsoftwareserial).
 - Motion sensors, btproxy, aquarium plug, Kauf plug: move them onto `common/` and keep their entities.
 
 ## 8. Duplicates and missing configs: one config per hostname
