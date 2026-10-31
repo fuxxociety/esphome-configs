@@ -1,0 +1,20 @@
+# Effects for addressable RGB (the fixture ring): everything in color.yaml plus per-pixel effects.
+- !include parts/random_slow.yaml
+- !include parts/random_fast.yaml
+- !include parts/random_insane.yaml
+- !include parts/random_loco.yaml
+- !include parts/chill.yaml
+- !include parts/chill_vibrant.yaml
+- !include parts/disco.yaml
+- !include parts/color_cycle.yaml
+- !include parts/rgb_breathing.yaml
+- !include parts/breathing.yaml
+- !include parts/flicker.yaml
+- !include parts/strobe_color.yaml
+- !include parts/lightning_color.yaml
+- !include parts/in_alarm.yaml
+- !include parts/rainbow.yaml
+- !include parts/spinner.yaml
+- !include parts/pulse_wave.yaml
+- !include parts/symmetrical_glow.yaml
+- !include parts/concert.yaml

@@ -1,0 +1,12 @@
+---
+# definition for single press
+timing:
+  - ON for at most $sub_hold_time
+  - OFF for at least $sub_double_press_max_gap
+invalid_cooldown: 1500ms
+then:
+  - logger.log: "Detected Single Press"
+  - lambda: |-
+      id(script_cycle_brightness).execute();
+      id(script_hass_toggle_single_press).execute();
+      id($sub_on_single_press).execute();

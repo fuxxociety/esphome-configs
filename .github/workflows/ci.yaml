@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install yamllint
+      # Legacy trees (modules/, devices/, ...) have ~600 cosmetic errors and are deleted at
+      # cut-over; until then lint only the new layout. Widen to `.` in Phase 6.
+      - run: |
+          paths=$(ls -d common templates .github 2>/dev/null)
+          yamllint --no-warnings $paths
+
+  prepare:
+    runs-on: ubuntu-latest
+    needs: yamllint
+    outputs:
+      files: ${{ steps.files.outputs.files }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: files
+        # Top-level device configs only; shared files live in common/ and templates/.
+        # Configs deliberately parked with a top-level `invalid:` key are skipped.
+        run: |
+          files=$(ls *.yaml | grep -vE '^secrets' | while read -r f; do grep -q '^invalid:' "$f" || echo "$f"; done)
+          echo "files=$(printf '%s\n' $files | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
+
+  configs:
+    runs-on: ubuntu-latest
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        file: ${{ fromJson(needs.prepare.outputs.files) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # Keep in step with ../requirements.txt in the tooling repo
+      - run: pip install esphome==2026.10.1
+      - run: cp secrets.ci.yaml secrets.yaml
+      - run: esphome config ${{ matrix.file }} > /dev/null

@@ -1,0 +1,11 @@
+# Classic ESP32 (WROOM/WROVER): growlights, pedestal fan, Bluetooth proxies.
+substitutions:
+  esp32_board: esp32dev
+
+esp32:
+  board: ${esp32_board}
+  framework:
+    type: esp-idf
+
+packages:
+  base: !include ../base.yaml

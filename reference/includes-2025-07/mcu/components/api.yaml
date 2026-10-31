@@ -1,0 +1,8 @@
+---
+# https://esphome.io/components/api.html
+
+api:
+  id: esp_api
+  reboot_timeout: 35min
+  # Removed in favor of per-device encryption key
+  #password: !secret esphome_api_password

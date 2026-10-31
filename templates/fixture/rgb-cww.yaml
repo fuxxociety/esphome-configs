@@ -1,0 +1,58 @@
+# Ceiling fixture: CWW centre PANEL (the main light) + addressable RGB RING around it (the accent), on an ESP8266
+# (BEHAVIOR.md §6). Two entities so both can run at once with independent settings: the panel carries the
+# fixture's name, the ring is "Ring".
+#
+# Device file:
+#   substitutions: {name: light-masterbath-shower, friendly_name: Master Bath Shower Fixture, room_key: masterbath_shower,
+#                   cw_pin: GPIO5, ww_pin: GPIO4, ring_leds: '60'}
+#   packages:      {device: !include templates/fixture/rgb-cww.yaml}
+substitutions:
+  device_description: RGB ring + CWW panel ceiling fixture
+  cw_pin: GPIO5
+  ww_pin: GPIO4
+  pwm_frequency: 300 Hz
+  panel_max_power: 100%
+  cold_kelvin: 6535 K
+  warm_kelvin: 2000 K
+  ring_pin: GPIO2
+  ring_leds: '60'
+  ring_variant: WS2812
+  ring_order: GRB
+
+packages:
+  platform: !include ../../common/platforms/esp8266.yaml
+  bulb: !include ../../common/light/bulb.yaml
+
+output:
+  - {platform: esp8266_pwm, id: output_cold, pin: '${cw_pin}', frequency: '${pwm_frequency}', max_power: '${panel_max_power}'}
+  - {platform: esp8266_pwm, id: output_warm, pin: '${ww_pin}', frequency: '${pwm_frequency}', max_power: '${panel_max_power}'}
+
+light:
+  # Panel: the fixture's main light (power-on rule, Default Fade and esphome.light events from common/light/bulb.yaml)
+  - platform: cwww
+    id: main_light
+    name: None
+    cold_white: output_cold
+    warm_white: output_warm
+    cold_white_color_temperature: ${cold_kelvin}
+    warm_white_color_temperature: ${warm_kelvin}
+    constant_brightness: true
+    restore_mode: RESTORE_DEFAULT_ON
+    default_transition_length: 250ms
+    on_turn_on:
+      - script.execute: bulb_event_on
+    on_turn_off:
+      - script.execute: bulb_event_off
+    effects: !include ../../common/effects/white.yaml
+
+  # Ring: accent, independent of the panel; off after a power cut
+  - platform: neopixelbus
+    id: ring
+    name: Ring
+    pin: ${ring_pin}
+    num_leds: ${ring_leds}
+    variant: ${ring_variant}
+    type: ${ring_order}
+    restore_mode: RESTORE_DEFAULT_OFF
+    default_transition_length: 250ms
+    effects: !include ../../common/effects/addressable.yaml

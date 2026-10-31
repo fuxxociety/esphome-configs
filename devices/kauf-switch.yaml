@@ -1,0 +1,669 @@
+---
+substitutions:
+  nameprefix: 'switch-'
+  device_description: 'Generic Switch template for all non-dimmable switches'
+  disable_entities: "true"     # set to "false" to have all entities show up in Home Assistant automatically
+
+  wifi_ap_timeout: 2min        # default to 2 minute timeout for yaml file as package.
+
+  # substitutions for scripts to execute based on button actions.
+  # the built-in automations for the button will still do everything they normally do even
+  # when these substitutions are redefined.  Redefining these will not stop the ui switch from toggling.
+  # The button configuration select entity must be set to disabled to stop the button from toggling the ui switch.
+  # The button press duration sensor will also still update even with these redefined.
+  sub_on_press:                script_do_nothing # executes right when button is pressed
+  sub_on_release:              script_do_nothing # executes right when button is released
+  sub_on_double_press:         script_do_nothing # executes when the button is double pressed
+  sub_on_single_press:         script_do_nothing # executes when the button is single pressed only, not held or double pressed
+  sub_on_hold:                 script_do_nothing # executes when the button is held for a threshold amount of time
+  sub_on_release_without_hold: script_do_nothing # executes when the button is released after a press that is under the hold threshold.
+
+  # an extra script that, if running, will stop the switch from toggling on button release.
+  sub_toggle_check: script_do_nothing
+
+  # Delay used for resetting the next value of the select_brightness function.
+  select_brightness_delay: "8s"
+
+  # these will execute when ui_switch turns on and off, respectively.  like on_press and on_release above, built-in
+  # automations still all run.  Lights changing can be disabled through the config light entity effects.  Relay
+  # can be disabled by selecting always on or always off in the configuration select entity.  You can control the
+  # relay independently by toggling the select entity between always on and always off.
+  sub_on_turn_on:  script_do_nothing
+  sub_on_turn_off: script_do_nothing
+
+  # allows status led to be blocked.  Currently only used on factory image to eliminate blinking during factory test.
+  sub_blink_check: script_do_nothing
+
+  # modify transition length of lights
+  sub_transition_length: 333ms
+
+  # button press substitutions
+  sub_double_press_max_gap: 333ms
+  sub_hold_time: 750ms
+  sub_button_sensor_duration: 500ms
+
+  # substitutions to control hass entities with press combos
+  hass_entity_single_press_toggle:           no.ne
+  hass_entity_double_press_toggle:           double
+  hass_entity_hold_toggle:                   hold
+  hass_entity_release_without_hold_toggle:   no.ne
+
+  # substitutions to sync lights with hass entities instead of UI switch
+  hass_entity_control_red_light:           no.ne
+  hass_entity_control_red_light_on_state:  'on'
+  hass_entity_control_red_light_off_state: 'off'
+  hass_entity_control_indicator_light:             no.ne
+  hass_entity_control_indicator_light_on_state:    'on'
+  hass_entity_control_indicator_light_off_state:   'off'
+
+packages:
+  esp: !include ../modules/ESP8266.yaml
+
+esp8266:
+  restore_from_flash: true
+  early_pin_init: false
+
+globals:
+  - id: global_press_time
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+esphome:
+  on_boot:
+    then:
+        # set default values for template sensors, otherwise they are unknown.
+      - binary_sensor.template.publish:
+          id: button_single_press
+          state: OFF
+      - binary_sensor.template.publish:
+          id: button_double_press
+          state: OFF
+      - binary_sensor.template.publish:
+          id: button_hold
+          state: OFF
+      - binary_sensor.template.publish:
+          id: button_release_without_hold
+          state: OFF
+
+api:
+  id: kauf_api
+
+ota:
+  - id: !extend my_ota
+    on_error:
+      then:
+        - button.press: restart_button
+
+binary_sensor:
+  - platform: gpio
+    id: main_button
+    name: ${system_name}${namesuffix} Button
+    pin:
+      number: GPIO13
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+
+    on_press:
+        then:
+            # store press time in ms
+          - lambda: |-
+              // store time of press and clear duration sensor
+              id(global_press_time) = millis();
+              id(sensor_press_duration).publish_state(0);
+
+              // toggle if button is configured to toggle on press
+              if (id(select_button).state == "Toggle on Press") {
+                id(ui_switch).toggle(); }
+          - script.execute: $sub_on_press
+
+    on_release:
+        then:
+          - lambda: |-
+              // set press duration sensor
+              id(sensor_press_duration).publish_state(millis() - id(global_press_time));
+
+              // toggle if configured to toggle on release and toggle check script is no longer running
+              if (  (id(select_button).state == "Toggle on Release") && !id($sub_toggle_check).is_running() ) {
+                id(ui_switch).toggle(); }
+          - script.execute: $sub_on_release
+
+    on_multi_click:
+      # definition for single press
+    - timing:
+        - ON for at most $sub_hold_time
+        - OFF for at least $sub_double_press_max_gap
+      invalid_cooldown: 1000ms
+      then:
+        - lambda: |-
+            id(button_single_press).publish_state(true);
+            id(script_hass_toggle_single_press).execute();
+            id($sub_on_single_press).execute();
+            // toggle if button is configured to toggle on single press
+            if (id(select_button).state == "Toggle on Single Press") {
+              if (id(select_relay).state == "Always On") {
+                if (!id(reset_delay).is_running() ) {
+                  id(ui_switch).turn_on();
+                  auto call = id(select_brightness).make_call();
+                  call.set_option("bright");
+                  call.perform();
+                } else {
+                  auto call = id(select_brightness).make_call();
+                  call.select_next(true);
+                  if (id(select_brightness).state != "off") {
+                    id(ui_switch).turn_on();
+                  } else {
+                    id(ui_switch).turn_off();
+                  }
+                  call.perform();
+                }
+              } else {
+                id(ui_switch).toggle();
+              }
+            }
+
+      # definition for double press
+    - timing:
+        - ON for at most $sub_hold_time
+        - OFF for at most $sub_double_press_max_gap
+        - ON for at least 1ms
+      then:
+        - lambda: |-
+            id(button_double_press).publish_state(true);
+            // toggle if button is configured to toggle on double press
+            if (id(select_button).state == "Toggle on Double Press") {
+              id(ui_switch).toggle(); }
+            id(script_hass_toggle_double_press).execute();
+            id($sub_on_double_press).execute();
+
+      # definition for holding
+    - timing:
+        - ON for at least $sub_hold_time
+      then:
+        - lambda: |-
+            id(button_hold).publish_state(true);
+            // toggle if button is configured to toggle on hold
+            if (id(select_button).state == "Toggle on Hold") {
+              id(ui_switch).toggle(); }
+            id(script_hass_toggle_hold).execute();
+            id($sub_on_hold).execute();
+
+      # definition for release without hold
+    - timing:
+        - ON for at most $sub_hold_time
+      then:
+        - lambda: |-
+            id(button_release_without_hold).publish_state(true);
+            // toggle if button is configured to toggle on release without hold
+            if (id(select_button).state == "Toggle on Release Without Hold") {
+              id(ui_switch).toggle(); }
+            id(script_hass_toggle_release_without_hold).execute();
+            id($sub_on_release_without_hold).execute();
+
+      # definition for 30s hold to clear credentials
+    - timing:
+        - ON for at least 30s
+      then:
+      - logger.log: "------------------->>>>>>>>>>>>>>>>>   HELD BUTTON 30 SECONDS, FORCING AP"
+
+      # overwrite software defined credentials to force ap to turn on.
+      - lambda: wifi::global_wifi_component->save_wifi_sta("initial_ap","asdfasdfasdfasdf");
+
+      # blink LED for 10s then restart to get captive portal to turn on.
+      - script.execute: blink_led
+      - delay: 10s
+      - button.press: restart_button
+
+  - platform: template
+    name: ${system_name}${namesuffix} Single Press
+    id: button_single_press
+    on_press:
+      - delay: $sub_button_sensor_duration
+      - binary_sensor.template.publish:
+          id: button_single_press
+          state: OFF
+
+  - platform: template
+    name: ${system_name}${namesuffix} Double Press
+    id: button_double_press
+    on_press:
+      - delay: $sub_button_sensor_duration
+      - binary_sensor.template.publish:
+          id: button_double_press
+          state: OFF
+
+  - platform: template
+    name: ${system_name}${namesuffix} Hold
+    id: button_hold
+    on_press:
+      - wait_until:
+          binary_sensor.is_off: main_button
+      - binary_sensor.template.publish:
+          id: button_hold
+          state: OFF
+
+  - platform: template
+    name: ${system_name}${namesuffix} Release Without Hold
+    id: button_release_without_hold
+    on_press:
+      - delay: $sub_button_sensor_duration
+      - binary_sensor.template.publish:
+          id: button_release_without_hold
+          state: OFF
+
+switch:
+  - platform: gpio
+    id: relay
+    pin: GPIO12
+
+    # https://esphome.io/components/switch/template.html
+  - platform: template
+    name: ${system_name}${namesuffix}
+    id: ui_switch
+    restore_mode: RESTORE_DEFAULT_OFF
+    optimistic: true
+    on_turn_on:
+      then:
+        - lambda: |-
+            // waiting for select entity to have a state keeps the relay from toggling during boot
+            if ( id(select_relay).has_state() && ( id(select_relay).state != "Always Off" ) ) {
+              id(relay).turn_on(); }
+        - script.execute: copy_vals
+        - script.execute: script_save_changes
+        - script.execute: $sub_on_turn_on
+
+    on_turn_off:
+      then:
+        - lambda: |-
+            // waiting for select entity to have a state keeps the relay from toggling during boot
+            if ( id(select_relay).has_state() && ( id(select_relay).state != "Always On" ) ) {
+              id(relay).turn_off(); }
+        - script.execute: copy_vals
+        - script.execute: script_save_changes
+        - script.execute: $sub_on_turn_off
+
+  - platform: template
+    id: switch_no_hass
+    name: ${system_name}${namesuffix} No HASS
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    entity_category: config
+    disabled_by_default: $disable_entities
+    icon: mdi:toggle-switch-off-outline
+
+    on_turn_on:
+      - lambda: |-
+          id(kauf_api)->set_reboot_timeout(0);  // 0 disables auto rebooting and also new status led blinking.  doesn't stop current status led blinking
+          id(kauf_api)->status_clear_warning(); // stops current status led blinking, timeout 0 keeps it from restarting
+      - script.execute: script_save_changes
+
+    on_turn_off:
+      - lambda: id(kauf_api)->set_reboot_timeout(900000);
+      - script.execute: script_save_changes
+
+
+# PWM outputs for each LED channel
+# https://esphome.io/components/output/esp8266_pwm.html
+output:
+    # RED pwm
+  - platform: esp8266_pwm
+    pin: GPIO5
+    frequency: 250 Hz
+    id: pwm_red
+    inverted: true
+
+    # WHITE pwm
+  - platform: esp8266_pwm
+    pin: GPIO4
+    frequency: 250 Hz
+    id: pwm_white
+    inverted: true
+
+    # Bit bucket output to connect configuration lights to.
+    # https://esphome.io/components/output/template.html
+  - platform: template
+    id: bit_bucket
+    type: float
+    write_action:
+      - script.execute: script_do_nothing
+
+
+# https://esphome.io/components/light/index.html
+# https://esphome.io/components/light/rgb.html
+light:
+  - platform: monochromatic
+    name: ${system_name}${namesuffix} Red Light
+    id: red_light
+    output: pwm_red
+    default_transition_length: $sub_transition_length
+
+  - platform: monochromatic
+    name: ${system_name}${namesuffix} RED Off Value
+    id: red_light_off
+    output: bit_bucket
+    entity_category: config
+    default_transition_length: 0s
+    effects:
+      - lambda:
+          name: Disabled
+          update_interval: never
+          lambda: return;
+    on_state:
+      then:
+        - script.execute: copy_vals
+
+  - platform: monochromatic
+    name: ${system_name}${namesuffix} RED On Value
+    id: red_light_on
+    output: bit_bucket
+    entity_category: config
+    default_transition_length: 0s
+    effects:
+      - lambda:
+          name: Disabled
+          update_interval: never
+          lambda: return;
+    on_state:
+      then:
+        - script.execute: copy_vals
+
+  - platform: monochromatic
+    name: ${system_name}${namesuffix} indicator Light
+    id: indicator_light
+    output: pwm_white
+    default_transition_length: $sub_transition_length
+
+  - platform: monochromatic
+    name: ${system_name}${namesuffix} indicator Off Value
+    id: indicator_light_off
+    output: bit_bucket
+    entity_category: config
+    default_transition_length: 0s
+    effects:
+      - lambda:
+          name: Disabled
+          update_interval: never
+          lambda: return;
+    on_state:
+      then:
+        - script.execute: copy_vals
+
+  - platform: monochromatic
+    name: ${system_name}${namesuffix} indicator On Value
+    id: indicator_light_on
+    output: bit_bucket
+    entity_category: config
+    default_transition_length: 0s
+    effects:
+      - lambda:
+          name: Disabled
+          update_interval: never
+          lambda: return;
+    on_state:
+      then:
+        - script.execute: copy_vals
+
+select:
+  - platform: template
+    name: ${system_name}${namesuffix} Relay Config
+    id: select_relay
+    optimistic: true
+    options:
+      - Switched
+      - Always On
+      - Always Off
+    initial_option: Switched
+    restore_value: true
+    entity_category: config
+    icon: mdi:progress-question
+    on_value:
+      then:
+        - lambda: |-
+            if      ( x == "Always On"  )   { id(relay).turn_on();  }
+            else if ( x == "Always Off" )   { id(relay).turn_off(); }
+            else if ( id(ui_switch).state ) { id(relay).turn_on();  }
+            else      /* ui_switch off */   { id(relay).turn_off(); }
+        - script.execute: script_save_changes
+
+  - platform: template
+    name: ${system_name}${namesuffix} Button Config
+    id: select_button
+    optimistic: true
+    options:
+      - Toggle on Press
+      - Disabled
+      - Toggle on Release
+      - Toggle on Single Press
+      - Toggle on Double Press
+      - Toggle on Hold
+      - Toggle on Release Without Hold
+    initial_option: 'Toggle on Single Press'
+    restore_value: true
+    entity_category: config
+    icon: mdi:toggle-switch-off-outline
+    on_value:
+      - script.execute: script_save_changes
+
+  - platform: template
+    name: ${system_name}${namesuffix} brightness
+    id: select_brightness
+    optimistic: true
+    options:
+      - "off"
+      - "bright"
+      - "medium"
+      - "low"
+      - "night"
+    initial_option: "off"
+    restore_value: false
+    icon: mdi:restart-alert
+    on_value:
+      - script.execute: reset_delay
+      - homeassistant.event:
+          event: esphome.single
+          data:
+            devicename: ${system_name}
+            name_friendly: ${friendly_name}
+            action: single_press
+            mode: !lambda return id(select_relay).state;
+            effect: !lambda return id(select_brightness).state;
+    entity_category: config
+
+script:
+  - id: reset_delay
+    mode: restart
+    then:
+      - delay: 8s
+      - logger.log: "select_brightness has expired!"
+
+  - id: blink_status_led
+    mode: queued
+    then:
+
+      # allows the blinking to be blocked if desired by overwriting script substitution
+      - script.execute: $sub_blink_check
+
+      #- lambda: |-
+      #    auto call = id(indicator_light).turn_off();
+      #    call.perform();
+      # set LED red for ? ms then off for ? ms, then repeat
+      - lambda: |-
+          auto call = id(red_light).turn_on();
+          call.set_brightness(1.0f);
+          call.set_transition_length(0);
+          call.perform();
+      - delay: 350ms
+      - lambda: |-
+          auto call = id(red_light).turn_off();
+          call.set_transition_length(0);
+          call.perform();
+      - delay: 1150ms
+      - if:
+          condition:
+            - lambda: return ( ( (App.get_app_state() & STATUS_LED_ERROR) != 0u) || ((App.get_app_state() & STATUS_LED_WARNING) != 0u) );
+          then:
+            - script.execute: blink_status_led # repeat as long as api not connected
+          else:
+            - script.execute: copy_vals        # restore set colors if api is connected
+
+    # blink LED forever.  Used when button is held to re-enable AP.  Stops blinking because plug restarts.
+  - id: blink_led
+    mode: queued
+    then:
+      - light.toggle: red_light
+      - delay: 333ms
+      - script.execute: blink_led
+
+  - id: script_do_nothing
+    then:
+      - lambda: return;
+
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+
+  # script to copy values from config lights to real lights per switch state
+  - id: copy_vals
+    mode: restart
+    then:
+      - lambda: |-
+          // (red) switch is on, copy on values
+          if ( ( id(ui_switch).state                                                              && (strcmp("$hass_entity_control_red_light","no.ne") == 0 ) && (red_light_on->get_effect_name() != "Disabled")) ||
+               ((id(hass_red_light_state).state == "$hass_entity_control_red_light_on_state") && (strcmp("$hass_entity_control_red_light","no.ne") != 0 ) && (red_light_on->get_effect_name() != "Disabled"))  ) {
+            auto call = id(red_light).make_call();
+            call.set_state(red_light_on->current_values.is_on());
+            call.set_brightness(red_light_on->current_values.get_brightness());
+            call.perform();
+          }
+
+          // (red) switch is off, copy off values
+          else if ( (!id(ui_switch).state                                                               && (strcmp("$hass_entity_control_red_light","no.ne") == 0 ) && (red_light_on->get_effect_name() != "Disabled")) ||
+                    ((id(hass_red_light_state).state == "$hass_entity_control_red_light_off_state") && (strcmp("$hass_entity_control_red_light","no.ne") != 0 ) && (red_light_on->get_effect_name() != "Disabled"))  ) {
+            auto call = id(red_light).make_call();
+            call.set_state(red_light_off->current_values.is_on());
+            call.set_brightness(red_light_off->current_values.get_brightness());
+            call.perform();
+          }
+          // (indicator) switch is on, copy on values
+          if ( ( id(ui_switch).state                                                          && (strcmp("$hass_entity_control_indicator_light","no.ne") == 0 ) && (indicator_light_on->get_effect_name() != "Disabled")) ||
+               ((id(hass_indicator_light_state).state == "$hass_entity_control_indicator_light_on_state") && (strcmp("$hass_entity_control_indicator_light","no.ne") != 0 ) && (indicator_light_on->get_effect_name() != "Disabled"))  ) {
+            auto call = id(indicator_light).make_call();
+            call.set_state(indicator_light_on->current_values.is_on());
+            call.set_brightness(indicator_light_on->current_values.get_brightness());
+            call.perform();
+          }
+          // (indicator) switch is off, copy off values
+          else if ( (!id(ui_switch).state                                                          && (strcmp("$hass_entity_control_indicator_light","no.ne") == 0 ) && (indicator_light_on->get_effect_name() != "Disabled")) ||
+                    ((id(hass_indicator_light_state).state == "$hass_entity_control_indicator_light_on_state") && (strcmp("$hass_entity_control_indicator_light","no.ne") != 0 ) && (indicator_light_on->get_effect_name() != "Disabled"))  ) {
+            auto call = id(indicator_light).make_call();
+            call.set_state(indicator_light_off->current_values.is_on());
+            call.set_brightness(indicator_light_off->current_values.get_brightness());
+            call.perform();
+          }
+
+  - id: script_hass_toggle_single_press
+    then:
+      if:
+        condition:    # toggle if single press hass entity is set
+          lambda: return (strcmp("$hass_entity_single_press_toggle","no.ne") != 0 );
+        then:
+          homeassistant.event:
+            event: esphome.$hass_entity_single_press_toggle
+            data:
+              devicename: ${system_name}
+              name_friendly: ${friendly_name}
+              action: single_press
+
+  - id: script_hass_toggle_double_press
+    then:
+      if:
+        condition:    # toggle if double press hass entity is set
+          lambda: return (strcmp("$hass_entity_double_press_toggle","no.ne") != 0 );
+        then:
+          homeassistant.event:
+            event: esphome.$hass_entity_double_press_toggle
+            data:
+              devicename: ${system_name}
+              name_friendly: ${friendly_name}
+              action: double_press
+
+  - id: script_hass_toggle_hold
+    then:
+      if:
+        condition:    # toggle if hold hass entity is set
+          lambda: return (strcmp("$hass_entity_hold_toggle","no.ne") != 0 );
+        then:
+          homeassistant.event:
+            event: esphome.$hass_entity_hold_toggle
+            data:
+              devicename: ${system_name}
+              name_friendly: ${friendly_name}
+              action: hold
+
+  - id: script_hass_toggle_release_without_hold
+    then:
+      if:
+        condition:    # toggle if release without hold hass entity is set
+          lambda: return (strcmp("$hass_entity_release_without_hold_toggle","no.ne") != 0 );
+        then:
+          homeassistant.event:
+            event: esphome.$hass_entity_release_without_hold_toggle
+            data:
+              devicename: ${system_name}
+              name_friendly: ${friendly_name}
+              action: release_without_hold
+
+button:
+    # https://esphome.io/components/button/template.html
+  - platform: template
+    name: ${system_name}${namesuffix} Restore Lights
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+    on_press:
+      - script.execute: copy_vals
+
+
+# Send IP Address to HA
+# https://esphome.io/components/text_sensor/wifi_info.html
+text_sensor:
+  - platform: homeassistant
+    id: hass_red_light_state
+    entity_id: $hass_entity_control_red_light
+    on_value:
+      - delay: 1ms
+      - script.execute: copy_vals
+  - platform: homeassistant
+    id: hass_indicator_light_state
+    entity_id: $hass_entity_control_indicator_light
+    on_value:
+      - delay: 1ms
+      - script.execute: copy_vals
+
+sensor:
+    # https://esphome.io/components/sensor/template.html
+  - platform: template
+    name: ${system_name}${namesuffix} Button Press Duration
+    id: sensor_press_duration
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+    unit_of_measurement: ms
+    icon: mdi:timer-outline
+
+# emulate status_led
+interval:
+  - interval: 5s
+    then:
+      if:
+        condition:
+          - lambda: return ( ( (App.get_app_state() & STATUS_LED_ERROR) != 0u) || ((App.get_app_state() & STATUS_LED_WARNING) != 0u) );
+        then:
+          - if:
+              condition:
+                not:
+                  - script.is_running: blink_status_led
+              then:
+                - script.execute: blink_status_led

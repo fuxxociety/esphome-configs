@@ -1,0 +1,2 @@
+# was a lambda: random colour every 500 ms with a 500 ms fade
+random: {name: Disco, transition_length: 500ms, update_interval: 500ms}

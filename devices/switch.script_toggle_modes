@@ -1,0 +1,39 @@
+script:
+  - id: script_toggle_modes
+    then:
+      - lambda: |-
+          auto call = id(select_brightness).make_call();
+
+          if ( id(select_relay).state == "Always On" ) {  // Always On mode
+            // If the delay is not running, handle initial actions
+            if ( !id(reset_delay).is_running() ) {
+              if ( id(ui_switch).state ) {
+                call.select_first();                      // turn bulbs off
+                id(reset_delay).execute();                // start timer
+              } else {
+                call.set_option("bright");                // set to bright mode
+              }
+            } else {
+              call.select_next(true);                     // cycle through options
+              id(reset_delay).execute();                  // restart delay
+            }
+
+            // Apply the selected option and manage the ui_switch state
+            call.perform();
+            if ( id(select_brightness).state == "off" ) {
+              id(ui_switch).turn_off();
+            } else {
+              id(ui_switch).turn_on();
+            }
+
+          } else {  // Always Off or Switched mode
+            // Simple toggle of brightness options and ui_switch state
+            if ( id(ui_switch).state ) {
+              call.select_first();
+              id(ui_switch).turn_off();
+            } else {
+              call.set_option("bright");
+              id(ui_switch).turn_on();
+            }
+            call.perform();
+          }

@@ -1,0 +1,5 @@
+---
+id: latch${number}
+type: bool
+restore_value: no
+initial_value: "false"

@@ -1,0 +1,12 @@
+substitutions:
+  name: light-livingroom-grow
+  friendly_name: Living Room Grow
+  room_key: livingroom_grow
+
+packages:
+  device: !include templates/diy/esp32-pwm-5ch.yaml
+
+sensor:
+  - platform: ble_rssi
+    mac_address: 74:9E:F5:BC:D8:4A
+    name: Josh Phone

@@ -1,0 +1,17 @@
+---
+# Generic ESP-8266 with 4MB memory (ESP-12E)
+# https://docs.platformio.org/en/latest/boards/espressif8266/esp01_1m.html#board-espressif8266-esp01-1m
+#
+substitutions:
+  nameprefix: ''
+  namesuffix: ''
+
+esphome:
+  name: "${nameprefix}${system_name}${namesuffix}"
+  comment: "${device_description}"
+
+esp8266:
+  board: esp12e
+
+packages:
+  <<: !include_dir_named components/common

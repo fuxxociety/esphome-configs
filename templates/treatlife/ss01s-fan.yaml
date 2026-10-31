@@ -1,0 +1,10 @@
+# Treatlife SS01S wall switch for an on/off fan, e.g. a bath vent (BEHAVIOR.md §2).
+#   substitutions: {name: fan-upbath-vent, friendly_name: Upstairs Bath Vent, room_key: upbath_vent}
+#   packages:      {device: !include templates/treatlife/ss01s-fan.yaml}
+substitutions:
+  device_description: Treatlife SS01S fan switch
+
+packages:
+  platform: !include ../../common/platforms/esp8266.yaml
+  hardware: !include ss01s-hardware.yaml
+  load: !include ../../common/switch/load-fan.yaml

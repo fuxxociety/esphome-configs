@@ -1,0 +1,63 @@
+# LED policy for common/switch/core.yaml used by the wall switches and wash plugs (as 2025.x): the status LED shows
+# the load at "Status LED On Brightness" / "Status LED Off Brightness" (scaled by the room brightness in smart mode),
+# and the error LED blinks while the API or Wi-Fi is in trouble.
+output:
+  # bit buckets for the LED config lights
+  - {platform: template, id: bb_led_on, type: float, write_action: [lambda: return;]}
+  - {platform: template, id: bb_led_off, type: float, write_action: [lambda: return;]}
+
+light:
+  # LED brightness to show when the load is on / off. Off = LED dark in that state.
+  - platform: monochromatic
+    id: led_on_cfg
+    name: Status LED On Brightness
+    output: bb_led_on
+    entity_category: config
+    default_transition_length: 0s
+    restore_mode: RESTORE_DEFAULT_ON
+    initial_state: {state: true, brightness: 100%}
+    on_state:
+      - script.execute: copy_vals
+  - platform: monochromatic
+    id: led_off_cfg
+    name: Status LED Off Brightness
+    output: bb_led_off
+    entity_category: config
+    default_transition_length: 0s
+    restore_mode: RESTORE_DEFAULT_ON
+    initial_state: {state: true, brightness: 10%}
+    on_state:
+      - script.execute: copy_vals
+
+interval:
+  # error LED blinks while the API or Wi-Fi is in trouble (as 2025.x blink_status_led)
+  - interval: 1500ms
+    then:
+      - if:
+          condition:
+            lambda: return (App.get_app_state() & (STATUS_LED_ERROR | STATUS_LED_WARNING)) != 0;
+          then:
+            - light.turn_on: {id: error_led, brightness: 100%, transition_length: 0s}
+            - delay: 350ms
+            - light.turn_off: {id: error_led, transition_length: 0s}
+
+script:
+  # Status LED shows the load: on-brightness (scaled by load_level in smart mode) or off-brightness
+  - id: copy_vals
+    mode: restart
+    then:
+      - lambda: |-
+          if (id(main_button).state) return;   // hold feedback owns the LED while the button is down
+          const bool on = id(load_on);
+          const bool smart = !id(ha_fallback) && id(relay_config).current_option() == "Always On";
+          auto &cfg = on ? id(led_on_cfg)->current_values : id(led_off_cfg)->current_values;
+          float b = cfg.is_on() ? cfg.get_brightness() : 0.0f;
+          if (on && smart) b *= std::max(0.15f, id(load_level));   // "night" still glows
+          auto call = id(status_led).make_call();
+          call.set_state(b > 0.0f);
+          if (b > 0.0f) call.set_brightness(b);
+          call.perform();
+
+  - id: led_restore
+    then:
+      - script.execute: copy_vals

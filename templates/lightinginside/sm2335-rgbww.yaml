@@ -1,0 +1,43 @@
+# LightingInside RGBWW bulb (Tuya CBLC5 module, BK7231N, SM2335 constant-current driver). Channel order and drive
+# current differ per model: use a19.yaml or b11.yaml.
+substitutions:
+  data_pin: P24
+  clock_pin: P6
+
+packages:
+  platform: !include ../../common/platforms/bk7231n.yaml
+  bulb: !include ../../common/light/bulb.yaml
+
+sm2335:
+  data_pin: ${data_pin}
+  clock_pin: ${clock_pin}
+  max_power_color_channels: ${power_color}
+  max_power_white_channels: ${power_white}
+
+output:
+  - {platform: sm2335, id: output_red, channel: '${channel_red}'}
+  - {platform: sm2335, id: output_green, channel: '${channel_green}'}
+  - {platform: sm2335, id: output_blue, channel: '${channel_blue}'}
+  - {platform: sm2335, id: output_cold, channel: '${channel_cw}'}
+  - {platform: sm2335, id: output_warm, channel: '${channel_ww}'}
+
+light:
+  - platform: rgbww
+    id: main_light
+    name: None
+    red: output_red
+    green: output_green
+    blue: output_blue
+    cold_white: output_cold
+    warm_white: output_warm
+    cold_white_color_temperature: 6500 K
+    warm_white_color_temperature: 2700 K
+    color_interlock: true
+    constant_brightness: true
+    restore_mode: RESTORE_DEFAULT_ON
+    default_transition_length: 250ms
+    on_turn_on:
+      - script.execute: bulb_event_on
+    on_turn_off:
+      - script.execute: bulb_event_off
+    effects: !include ../../common/effects/color.yaml

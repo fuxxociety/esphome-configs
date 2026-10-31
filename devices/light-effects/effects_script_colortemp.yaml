@@ -1,0 +1,247 @@
+api:
+  services:
+    - service: variable_brightness
+      variables:
+        brightness: string
+      then:
+        - logger.log: "Received brightness command"
+        - if:
+            condition:
+              lambda: 'return brightness == "red";'
+            then:
+              - script.execute: effect_red
+        - if:
+            condition:
+              lambda: 'return brightness == "blue";'
+            then:
+              - script.execute: effect_blue
+        - if:
+            condition:
+              lambda: 'return brightness == "green";'
+            then:
+              - script.execute: effect_green
+        - if:
+            condition:
+              lambda: 'return brightness == "yellow";'
+            then:
+              - script.execute: effect_yellow
+        - if:
+            condition:
+              lambda: 'return brightness == "candle";'
+            then:
+              - script.execute: effect_candle
+        - if:
+            condition:
+              lambda: 'return brightness == "warm";'
+            then:
+              - script.execute: effect_warm
+        - if:
+            condition:
+              lambda: 'return brightness == "natural";'
+            then:
+              - script.execute: effect_natural
+        - if:
+            condition:
+              lambda: 'return brightness == "bright";'
+            then:
+              - script.execute: effect_bright
+        - if:
+            condition:
+              lambda: 'return brightness == "medium";'
+            then:
+              - script.execute: effect_medium
+        - if:
+            condition:
+              lambda: 'return brightness == "low";'
+            then:
+              - script.execute: effect_low
+        - if:
+            condition:
+              lambda: 'return brightness == "night";'
+            then:
+              - script.execute: effect_night
+        - if:
+            condition:
+              lambda: 'return brightness == "snow";'
+            then:
+              - script.execute: effect_snow
+        - if:
+            condition:
+              lambda: 'return brightness == "relax";'
+            then:
+              - script.execute: effect_relax
+        - if:
+            condition:
+              lambda: 'return brightness == "reading";'
+            then:
+              - script.execute: effect_reading
+        - if:
+            condition:
+              lambda: 'return brightness == "work";'
+            then:
+              - script.execute: effect_work
+        - if:
+            condition:
+              lambda: 'return brightness == "sleep";'
+            then:
+              - script.execute: effect_sleep
+        - if:
+            condition:
+              lambda: 'return brightness == "off";'
+            then:
+              - script.execute: effect_off
+
+script:
+  - id: effect_red
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          red: 100%
+          green: 0%
+          blue: 0%
+          # white: 0%
+  - id: effect_blue
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          red: 0%
+          green: 0%
+          blue: 100%
+          # white: 0%
+  - id: effect_green
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          red: 0%
+          green: 100%
+          blue: 0%
+          # white: 0%
+  - id: effect_yellow
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          red: 100%
+          green: 100%
+          blue: 0%
+          # white: 0%
+  - id: effect_candle
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          # TBD
+  - id: effect_sleep
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 10%
+          red: 100%
+          green: 55%
+          blue: 55%
+          # white: 0%
+  - id: effect_warm
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          # white: 100%
+          color_temperature: 500 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100%
+  - id: effect_natural
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          # white: 100%
+          color_temperature: 327 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100%
+  - id: effect_bright
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          # white: 100%
+          color_temperature: 260 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100
+  - id: effect_medium
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 60%
+          # white: 100%
+          color_temperature: 260 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100
+  - id: effect_low
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 30%
+          # white: 100%
+          color_temperature: 260 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100
+  - id: effect_night
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 30%
+          # white 0%
+          red: 100%
+          green: 55%
+          blue: 55%
+  - id: effect_snow
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          # white: 100%
+          color_temperature: 153 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100%
+  - id: effect_relax
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 50%
+          # white: 50%
+          color_temperature: 500 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100%
+  - id: effect_reading
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 80%
+          # white: 80%
+          color_temperature: 414 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100%
+  - id: effect_work
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 80%
+          # white: 80%
+          color_temperature: 240 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100%
+  - id: effect_off
+    then:
+      - light.turn_off:
+          id: ${bulb_id}

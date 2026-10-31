@@ -1,0 +1,72 @@
+---
+platform: gpio
+pin:
+  inverted: true
+  number: ${gpio_pin}
+name: '${friendly_name} Button'
+#name: '${friendly_name} Button ${number}'
+disabled_by_default: false
+on_multi_click:
+  - timing:
+      - ON for at most 0.5s
+      - OFF for at least 0.2s
+    then:
+      - if:
+          condition:
+            or:
+              - lambda: 'return ${switch_relay_${number}};'
+              - not:
+                  - api.connected:
+              - ${relay_${number}_type}.is_off: '${relay_${number}_type}${number}'
+          then:
+            - ${relay_${number}_type}.toggle: '${relay_${number}_type}${number}'
+      - homeassistant.event:
+          event: esphome.button
+          data:
+            device: ${friendly_name}
+            action: single_click
+            button: '${number}'
+      - logger.log: "Single Click"
+  - timing:
+      - ON for at most 0.5s
+      - OFF for at most 0.5s
+      - ON for at most 0.5s
+      - OFF for at least 0.2s
+    then:
+      - homeassistant.event:
+          event: esphome.button
+          data:
+            device: ${friendly_name}
+            action: double_click
+            button: '${number}'
+      - logger.log: "Double Click"
+  - timing:
+      - ON for at most 0.5s
+      - OFF for at most 0.5s
+      - ON for at most 0.5s
+      - OFF for at most 0.5s
+      - ON for at most 0.5s
+      - OFF for at most 0.5s
+      - ON for at most 0.5s
+      - OFF for at least 0.2s
+    then:
+      - homeassistant.event:
+          event: esphome.button
+          data:
+            device: ${friendly_name}
+            action: four_clicks
+            button: '${number}'
+      - logger.log: "Four Clicks - restarting MCU"
+      - button.press: restart_button
+  - timing:
+      - 'ON for at least ${button_${number}_hold}'
+      # - OFF for at least 0.2s
+    then:
+      - homeassistant.event:
+          event: esphome.button
+          data:
+            device: ${friendly_name}
+            action: hold
+            button: '${number}'
+      - logger.log: "Press and Hold"
+      - ${reset_${number}_type}.toggle: '${reset_${number}_type}${number}'

@@ -1,0 +1,7 @@
+substitutions:
+  name: switch-garage
+  friendly_name: Garage
+  room_key: garage
+
+packages:
+  device: !include templates/treatlife/ss01s-light.yaml

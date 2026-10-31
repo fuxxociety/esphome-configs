@@ -1,0 +1,20 @@
+# D2 GPIO04 / IO18 : white led (inverted)
+# D1 GPIO05 / IO19 : red led (inverted)
+# D6 GPIO12 / IO04 : relay
+# D7 GPIO13 / IO05 : button (inverted)
+# D5 GPIO14 / IO03 : power/usage sensor (inverted)
+# ##################################
+substitutions:
+  device_name: upstairs-3w-light-switch      # **** CHANGE DEVICE NAME TO SOMETHING UNIQUE PER DEVICE.  RENAME >
+  device_number: ""                 # trailing number for multiple devices in a fixture
+                                     # **** USE DASHES (-) INSTEAD OF SPACES OR UNDERSCORE (_).  USE ONL>
+  friendly_name: Upstairs 3-Way    # **** CHANGE FRIENDLY NAME TO SOMETHING UNIQUE PER DEVICE        >
+
+  disable_entities:  "true"     # set to "false" to have all entities show up in Home Assistant automati>
+  disable_webserver: "false"    # set to "true" to disable the webserver listening on port 80.
+
+packages:
+  mcu: !include
+    file: includes/mcu/ESP32C3.yaml
+    vars:
+      esp_model: "ESP32-C3"

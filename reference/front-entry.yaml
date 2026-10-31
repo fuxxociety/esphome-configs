@@ -1,0 +1,907 @@
+# https://esphome.io/guides/configuration-types.html#substitutions
+substitutions:
+
+  name: frontentry-light-switch
+  friendly_name: Front Entry Light Switch
+  area: front_entryway
+
+  # https://esphome.io/components/esphome.html#esphome-creators-project
+  project_name: Treatlife.SS01S
+  project_ver_num: "1"
+
+  # https://esphome.io/components/switch/gpio.html?highlight=restore_mode
+  sub_restore_mode: RESTORE_DEFAULT_OFF  # overwrite to change boot up behavior of relay
+
+  disable_entities:  "false"     # set to "false" to have all entities show up in Home Assistant automatically
+
+  # substitutions for button actions.  on_press and on_release implement a timer scheme with configurable delay.
+  # on_hold_30s re-enables the AP and captive portal for the precompiled update binary.
+  # any length of hold can be implemented with just on_press and on_release using the following directions.  This
+  # is basically how this yaml file works.
+  #   * have a delay for the desired hold in the on_press script
+  #   * stop the on_press script in the on_release script
+  #   * place actions in the on_press script after the delay to perform them while still holding the button
+  #   * place actions in the on_release script, with the condition that the on_press script is not running, to
+  #     perform them on release of the button.
+  sub_on_press:                script_do_nothing  # executes right when button is initially pressed
+  sub_on_release:              script_do_nothing  # executes right when button is released
+  sub_on_single_press:         script_do_nothing  # executes when the button is single pressed
+  sub_on_double_press:         script_do_nothing  # executes when the button is double pressed
+  sub_on_short_hold:           script_do_nothing  # executes when the button is held fo>
+  sub_on_release_without_hold: script_do_nothing  # executes when the button is release>
+
+  sub_on_hold_3s:              script_do_nothing
+  sub_on_hold_10s:             script_do_nothing
+  sub_on_hold_30s:             script_force_ap    # executes right when button has been held for 5s, while button is still being held
+
+  sub_on_relay_turn_on:              script_do_nothing
+  sub_on_relay_turn_off:             script_do_nothing
+  sub_on_light_turn_on:              script_do_nothing
+  sub_on_light_turn_off:             script_do_nothing
+
+  sub_double_press_max_gap: 333ms
+  sub_hold_time: 750ms
+  sub_3s_hold_time: 3s
+  sub_10s_hold_time: 10s
+
+  # an extra script that, if running, will stop the relay from toggling on button release.
+  # used to not toggle when WiFi AP is re-enabled on update bin file.
+  sub_toggle_check:            script_force_ap
+
+  # made this a substitution so that the update bin file and yaml compiled versions can have different defaults
+  default_button_config: "Dumb Bulbs Mode"
+
+  # GPIO definitions
+  sub_button_pin:    GPIO13
+  sub_white_led_pin: GPIO4
+  sub_red_led_pin:   GPIO5
+  sub_relay_pin:     GPIO12
+
+  # debounce specifications
+  sub_debounce: "100" # in milliseconds
+
+  # API reboot timeout
+  sub_reboot_timeout: 0s
+
+
+# https://esphome.io/components/esp8266.html
+esp8266:
+  board: esp01_1m
+  restore_from_flash: true
+  early_pin_init: false
+
+
+# https://esphome.io/components/esphome.html#adjusting-flash-writes
+preferences:
+  flash_write_interval: 5min
+
+
+# https://esphome.io/components/esphome.html
+esphome:
+  name: $name
+  friendly_name: $friendly_name
+
+  project:
+    name: $project_name
+    version: $project_ver_num
+
+  on_boot:
+    then:
+        # implementing on_boot automation as a script makes it run in parallel
+        # with any other on_boot scripts.
+      - script.execute: script_set_power_leds
+      - script.execute: on_wifi_connect
+
+
+# https://esphome.io/components/wifi.html
+wifi:
+
+  # **** ENTER WI-FI CREDENTIALS HERE, USING SECRETS.YAML RECOMMENDED ****
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # enable wifi ap with ridiculous timeout so it does not normally turn on.
+  ap:
+    ap_timeout: 2147483647ms  # maximum 32 bit value.  About 3.5 weeks in milliseconds.
+
+
+# https://esphome.io/components/captive_portal.html
+captive_portal:
+
+
+# https://esphome.io/components/logger.html
+logger:
+  baud_rate: 0
+
+
+# https://esphome.io/components/api.html
+api:
+  id: kauf_api
+  encryption:
+    key: !secret api_enc_key
+  reboot_timeout: $sub_reboot_timeout
+
+
+# https://esphome.io/components/ota.html
+ota:
+#  - platform: web_server
+#    on_error:
+#    - button.press: restart_button
+  - platform: esphome
+    password: !secret esphome_ota_password
+    on_error:
+    - button.press: restart_button
+
+
+safe_mode:
+
+
+# https://esphome.io/components/web_server.html
+#web_server:
+#  js_url: https://kaufha.com/v2/www.js
+
+
+globals:
+  - id: global_press_time
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+
+# https://esphome.io/components/binary_sensor/index.html
+binary_sensor:
+
+    # button input toggles relay and thereby power led
+    # https://esphome.io/components/binary_sensor/gpio.html
+  - platform: gpio
+    id: main_button
+    name: Button
+    pin:
+      number: $sub_button_pin
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    on_press:
+      # store press time in ms
+      then:
+        - logger.log: "Button Pressed"
+        - lambda: |-
+            // store time of press and clear duration sensor
+            id(global_press_time) = millis();
+            id(sensor_press_duration).publish_state(0);
+        - script.execute: $sub_on_press
+        - lambda: |-
+            // toggle if configured for Toggle Relay on Press
+            if (id(select_button).state == "Toggle Relay on Press") {
+              id(relay).toggle(); }
+#        - script.execute: script_3s_timer
+#        - script.execute: script_10s_timer
+#        - script.execute: script_30s_timer
+    on_release:
+      then:
+        - logger.log: "Button Released"
+        - lambda: |-
+            // set press duration sensor
+            id(sensor_press_duration).publish_state(millis() - id(global_press_time));
+        - script.execute: $sub_on_release
+    filters:
+      - delayed_on: !lambda return $sub_debounce;
+    on_multi_click:
+      # definition for single press
+      - timing:
+          - ON for at most $sub_hold_time
+          - OFF for at least $sub_double_press_max_gap
+        invalid_cooldown: 1500ms
+        then:
+          - logger.log: "Single Pressed Button"
+          - script.execute: script_step_brightness
+          - script.execute: $sub_on_single_press
+
+      # definition for double press
+      - timing:
+        - ON for at most $sub_hold_time
+        - OFF for at most $sub_double_press_max_gap
+        - ON for at least 1ms
+        then:
+          - logger.log: "Detected Double Press"
+          - script.execute: $sub_on_double_press
+
+        # definition for holding
+      - timing:
+          - ON for at least $sub_hold_time
+        then:
+          - logger.log: "Detected Hold"
+          - script.execute: $sub_on_short_hold
+
+        # definition for release without hold
+      - timing:
+          - ON for at most $sub_hold_time
+        then:
+          - logger.log: "Detected Release Without Hold"
+          - script.execute: $sub_on_release_without_hold
+
+        # definition for 3s hold to change switch mode
+      - timing:
+          - ON for at least $sub_3s_hold_time
+        then:
+          - logger.log: "Detected 3s Hold"
+          - script.execute: $sub_on_hold_3s
+
+        # definition for 10s hold to change switch mode
+      - timing:
+          - ON for at least $sub_10s_hold_time
+        then:
+          - logger.log: "Detected 10s Hold"
+          - script.execute: $sub_on_hold_10s
+
+        # definition for 30s hold to clear credentials
+      - timing:
+          - ON for at least 30s
+        then:
+          - logger.log: "Detected 30s Hold"
+
+
+# https://esphome.io/guides/automations.html#script-component
+script:
+  # Called from physical button, white is desired
+  - id: script_step_brightness
+    then:
+      - if:
+          condition:
+            - lambda: 'return id(select_button).state == "Smart Bulbs Mode";'
+          then:
+            - switch.turn_on: relay     # Failsafe, relay should already be on
+            - if:
+                condition:
+                  # Smart bulbs mode, 8 second delay has expired
+                  not:
+                    - script.is_running: reset_delay
+                then:
+                  - if:
+                      condition:
+                        - light.is_on: main_light
+                      then:
+                      # Smart mode, light is on, turn off
+                        - light.turn_off: main_light   # Turn off UI Light
+                        - script.execute: reset_delay  # Start timer
+                      else:
+                      # Smart mode, light is off, turn on full brightness
+                        - light.turn_on:
+                            id: main_light
+                            color_mode: rgb
+                            red: 100%
+                            green: 100%
+                            blue: 100%
+                            brightness: 100%
+                        - script.execute: reset_delay   # Start timer
+                else:           # Smart bulbs mode,  8 seconds have not elapsed   
+                  - if:
+                      condition:                   # Light is off, turn it on max
+                        - light.is_off: main_light
+                      then:
+                        - light.turn_on:
+                            id: main_light
+                            color_mode: rgb
+                            red: 100%
+                            green: 100%
+                            blue: 100%
+                            brightness: 100%
+                      else:                        # Light is on, step brightness down
+                        - if:
+                            condition:
+                              - lambda: 'return id(main_light).current_values.get_brightness() * 100 + 0.5 > 99;'
+                            then:
+                              - light.turn_on:
+                                  id: main_light
+                                  color_mode: rgb
+                                  red: 100%
+                                  green: 100%
+                                  blue: 100%
+                                  brightness: 66%
+                              - script.execute: reset_delay   # Restart timer
+                            else:
+                              - if:
+                                  condition:
+                                    - lambda: 'return id(main_light).current_values.get_brightness() * 100 + 0.5 > 65;'
+                                  then:
+                                    - light.turn_on:
+                                        id: main_light
+                                        color_mode: rgb
+                                        red: 100%
+                                        green: 100%
+                                        blue: 100%
+                                        brightness: 33%
+                                    - script.execute: reset_delay   # Restart timer
+                                  else:
+                                    - if:
+                                        condition:
+                                          - lambda: 'return id(main_light).current_values.get_brightness() * 100 + 0.5 > 32;'
+                                        then:
+                                          - light.turn_off: main_light
+                                          - script.execute: reset_delay   # Restart timer
+                                    # no night mode in this script
+          
+          else:
+          # Dumb bulbs mode
+            - if:
+                condition:                   # Light is off, turn it on max
+                  - light.is_off: main_light
+                then:
+                  - switch.turn_on: relay
+                  - light.turn_on:
+                      id: main_light
+                      color_mode: rgb
+                      red: 100%
+                      green: 100%
+                      blue: 100%
+                      brightness: 100% 
+                else:
+                  - switch.turn_off: relay
+                  - light.turn_off: main_light
+      - script.execute: script_set_power_leds
+
+  # prevent race conditions when switching smart/dumb modes
+  - id: script_mode_switch
+    mode: single
+    then:
+      - delay: 200ms
+      - if:
+          condition:
+            - lambda: 'return id(select_button).state == "Smart Bulbs Mode";'
+          then:
+            - switch.turn_on: relay
+          else:  # NOT smart bulbs mode
+            - if:
+                condition:  # if Light is on
+                  - not:
+                      lambda: 'return id(main_light).remote_values.is_on();'
+                then:
+                  - switch.turn_off: relay
+                else:
+                  - switch.turn_on: relay
+      - script.execute: script_save_changes
+
+
+
+  # push brightness to min/max when changed in HA 
+  - id: correct_invalid_setting
+    mode: single
+    then:
+      # Called from on_state, small delay to break the loop
+      - delay: 100ms
+      - if:
+          condition:
+            - not:
+                lambda: 'return id(select_button).state == "Smart Bulbs Mode";'
+            - not:
+                light.is_off: main_light
+          then:
+            - light.turn_on:
+                id: main_light
+                color_mode: rgb
+                red: 100%
+                green: 100%
+                blue: 100%
+                brightness: 100% 
+
+  # 8-second timeout script
+  - id: reset_delay
+    mode: restart
+    then:
+      - delay: 8s
+      - logger.log: "Smart mode timer expired"
+
+    # sets LEDs to proper state based on LED configuration and relay state
+    # runs at boot and after every state change
+  - id: script_set_power_leds
+    then:
+      - if:
+        # if white led follows power status
+          condition:
+            or:
+              - lambda: 'return id(select_wled).state == "Power Status";'
+              - lambda: 'return id(select_wled).state == "Error and Power";'
+          then:
+            - if:
+                condition:
+                  not:
+                    - light.is_off: main_light
+                then:
+                  # Main Light is on, indicator brightness follows light brightness
+                  - lambda: |-
+                      // light is on
+                      id(white_led_pwm).set_level(id(main_light).remote_values.get_brightness());
+                      id(white_level).publish_state(id(main_light).remote_values.get_brightness());
+                else:
+                  # Main Light is off, indicator at minimum brightness
+                  - output.turn_on: white_led_pwm
+                  - output.set_level: 
+                      id: white_led_pwm
+                      level: 10%
+                  - lambda: 'id(white_level).publish_state(0.1);'
+          else:
+            - if:
+                condition:
+                  or:
+                    - lambda: 'return id(select_wled).state == "Invert Power Status";'
+                    - lambda: 'return id(select_wled).state == "Error and Invert Power";'
+                then:
+                  - if:
+                      condition:
+                        not:
+                          - light.is_on: main_light
+                      then:
+                        # Main Light is off, indicator at max brightness
+                        - switch.turn_on: white_led
+                      else:
+                        # Main Light is on, indicator off
+                        - switch.turn_off: white_led
+      - if:
+        # if red led follows power status
+          condition:
+            or:
+              - lambda: 'return id(select_rled).state == "Power Status";'
+              - lambda: 'return id(select_rled).state == "Error and Power";'
+          then:
+            - if:
+                condition:
+                  not:
+                    - light.is_off: main_light
+                then:
+                  # Main Light is on, red brightness follows light brightness
+                  - lambda: |-
+                      // light is on
+                      id(red_led_pwm).set_level(id(main_light).remote_values.get_brightness());
+                      id(red_level).publish_state(id(main_light).remote_values.get_brightness());
+
+                else:
+                  # Main Light is off, red at minimum brightness
+                  - output.turn_on: red_led_pwm
+                  - output.set_level: 
+                      id: red_led_pwm
+                      level: 10%
+                  - lambda: 'id(red_level).publish_state(0.1);'
+          else:
+            - if:
+                condition:
+                  or:
+                    - lambda: 'return id(select_rled).state == "Invert Power Status";'
+                    - lambda: 'return id(select_rled).state == "Error and Invert Power";'
+                then:
+                  - if:
+                      condition:
+                        not:
+                          - light.is_on: main_light
+                      then:
+                        # Main Light is off, red at max brightness
+                        - switch.turn_on: red_led
+                      else:
+                        # Main Light is on, red off
+                        - switch.turn_off: red_led
+
+      - script.execute: script_save_changes
+
+  - id: script_send_ha_event
+    then:
+      - logger.log: "Firing esphome.light_update event"
+      - if:
+          condition:
+            not:
+              - light.is_off: main_light
+          then:
+            - homeassistant.service:
+                service: esphome.light_update
+                data:
+                  state: 'on'
+                  area: $area
+                  brightness: !lambda 'return id(main_light).current_values.get_brightness();'
+          else:
+            - homeassistant.service:
+                service: esphome.light_update
+                data:
+                  state: 'off'
+                  area: $area
+                  brightness: !lambda 'return id(main_light).current_values.get_brightness();'
+
+  - id: blink_status_led
+    mode: queued
+    parameters:
+      on_time: int
+      off_time: int
+    then:
+      - logger.log: "script blink_status_led"
+      - lambda: |-
+          ESP_LOGD("blink_status_led","Blink times: on=%d ms, off=%d ms", on_time, off_time);
+      - lambda: |-
+          // turn on white LED if configured for error status
+          if ( (id(select_wled).state == "Error Status")  ||
+               (id(select_wled).state == "Error and Power") ||
+               (id(select_wled).state == "Error and Invert Power") ) {
+            id(white_led).turn_on();
+            id(white_led_pwm).set_level(1.0);
+            id(white_level).publish_state(1.0); }
+
+          // turn on red LED if configured for error status
+          if ( (id(select_rled).state == "Error Status")  ||
+               (id(select_rled).state == "Error and Power") ||
+               (id(select_rled).state == "Error and Invert Power") ) {
+            id(red_led).turn_on();
+            id(red_led_pwm).set_level(1.0);
+            id(red_level).publish_state(1.0); }
+
+      - lambda: |-
+          delay(on_time);
+
+      - lambda: |-
+          // turn off white LED if configured for error status
+          if ( (id(select_wled).state == "Error Status")  ||
+               (id(select_wled).state == "Error and Power") ||
+               (id(select_wled).state == "Error and Invert Power") ) {
+            id(white_led).turn_off();
+            id(white_led_pwm).set_level(0.0);
+            id(white_level).publish_state(0.0); }
+
+          // turn off red LED if configured for error status
+          if ( (id(select_rled).state == "Error Status")  ||
+               (id(select_rled).state == "Error and Power") ||
+               (id(select_rled).state == "Error and Invert Power") ) {
+            id(red_led).turn_off();
+            id(red_led_pwm).set_level(0.0);
+            id(red_level).publish_state(0.0); }
+
+      - lambda: |-
+          delay(off_time);
+
+      - if:
+          condition:
+            - lambda: return ( ( (App.get_app_state() & STATUS_LED_ERROR) != 0u) || ((App.get_app_state() & STATUS_LED_WARNING) != 0u) );
+          then:
+            - lambda: 'id(blink_status_led).execute(on_time, off_time);'
+          else:
+            - script.execute: script_set_power_leds # done with status LED, restore light power status
+
+  - id: on_wifi_connect
+    then:
+        # wait until wifi connects
+      - wait_until: wifi.connected
+      - lambda: |-
+          ESP_LOGD("KAUF on_boot","------------------->>>>>>>>>>>>>>>>>   wifi connected, cranking ap timeout back up");
+          wifi_wificomponent_id->set_ap_timeout(2147483647);
+
+  - id: script_force_ap
+    then:
+      - logger.log: "------------------->>>>>>>>>>>>>>>>>   HELD BUTTON 30 SECONDS, FORCING AP"
+      # overwrite software defined credentials to force ap to turn on.
+      - lambda: wifi::global_wifi_component->save_wifi_sta("initial_ap","asdfasdfasdfasdf");
+      # blink LED for 10s then restart to get captive portal to turn on.
+      - script.execute: blink_led
+      - delay: 10s
+      - button.press: restart_button
+
+    # called from script_force_ap. Blink LED forever.  Used when button is held to re-enable AP.  Stops blinking because plug restarts.
+  - id: blink_led
+    mode: queued
+    then:
+      - switch.toggle: white_led
+      - delay: 333ms
+      - script.execute: blink_led
+
+  - id: script_do_nothing
+    then:
+      - lambda: return;
+
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+
+
+# pwm outputs for LEDs so they can be dimmed
+# https://esphome.io/components/output/esp8266_pwm.html
+output:
+  - platform: esp8266_pwm
+    id: white_led_pwm
+    frequency: 200 Hz
+    pin: $sub_white_led_pin
+    inverted: true
+
+  - platform: esp8266_pwm
+    id: red_led_pwm
+    frequency: 200 Hz
+    pin: $sub_red_led_pin
+    inverted: true
+
+    # Bit bucket output to connect configuration lights to.
+    # https://esphome.io/components/output/template.html
+  - platform: template
+    id: bit_bucket
+    type: float
+    write_action:
+      - script.execute: script_do_nothing
+
+
+light:
+  - platform: rgb
+    name: Proxy Light
+    id: main_light
+    red: bit_bucket
+    green: bit_bucket
+    blue: bit_bucket
+    entity_category: config
+    default_transition_length: 0s
+    restore_mode: ALWAYS_OFF
+    effects:
+      - lambda:
+          name: Disabled
+          update_interval: never
+          lambda: return;
+    on_turn_on:
+      - if:
+          condition:
+            - lambda: 'return id(select_button).state == "Dumb Bulbs Mode";'
+          then:
+            - switch.turn_on: relay
+    on_turn_off:
+      - if:
+          condition:
+            - lambda: 'return id(select_button).state == "Dumb Bulbs Mode";'
+          then:
+            - switch.turn_off: relay
+    on_state:
+      then:
+        - if:
+            condition:
+              - lambda: 'return id(select_button).state == "Dumb Bulbs Mode";'
+              - lambda: 'return id(main_light).remote_values.is_on();'
+              - lambda: 'return id(main_light).remote_values.get_brightness() < 0.9;'
+            then:
+              - delay: 100ms
+              - script.execute: correct_invalid_setting
+        - script.execute: script_send_ha_event
+    initial_state:
+      state: off
+      color_mode: rgb
+      red: 0%
+      green: 100%
+      blue: 0%
+      brightness: 100%
+
+
+# https://esphome.io/components/switch/index.html
+switch:
+
+  - platform: gpio
+    id: relay
+    name: "Relay"
+    pin: $sub_relay_pin
+    entity_category: config
+    disabled_by_default: $disable_entities
+    internal: true
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+      - delay: 200ms
+      - script.execute: $sub_on_relay_turn_on
+      - if:
+          condition:
+            - lambda: 'return id(select_button).state == "Dumb Bulbs Mode";'
+            - not:
+                lambda: 'return id(main_light).remote_values.is_on();'
+          then:
+            - light.turn_on: main_light
+    on_turn_off:
+      - delay: 200ms
+      - script.execute: $sub_on_relay_turn_off
+      - if:
+          condition:
+            - lambda: 'return id(select_button).state == "Dumb Bulbs Mode";'
+            - lambda: 'return id(main_light).remote_values.is_on();'
+          then:
+            - light.turn_off: main_light
+
+  - platform: template
+    id: white_led
+    name: White LED
+    internal: true
+    optimistic: true
+    entity_category: config
+    disabled_by_default: $disable_entities
+    icon: mdi:led-outline
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: 'id(white_led_pwm).set_level(1.0);'
+      - lambda: 'id(white_level).publish_state(1.0);'
+    on_turn_off:
+      - lambda: 'id(white_led_pwm).set_level(0.0);'
+      - lambda: 'id(white_level).publish_state(0.0);'
+
+  - platform: template
+    id: red_led
+    name: Red LED
+    internal: true
+    optimistic: true
+    entity_category: config
+    disabled_by_default: $disable_entities
+    icon: mdi:led-outline
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: 'id(red_led_pwm).set_level(1.0);'
+      - lambda: 'id(red_level).publish_state(1.0);'
+    on_turn_off:
+      - lambda: 'id(red_led_pwm).set_level(0.0);'
+      - lambda: 'id(red_level).publish_state(0.0);'
+
+
+# https://esphome.io/components/button/index.html
+# https://esphome.io/components/button/restart.html
+button:
+  - platform: restart
+    id: restart_button
+    name: Restart Firmware
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+
+# Button for remote testing
+  - platform: template
+    id: test1
+    name: Single Click
+    disabled_by_default: false
+    on_press:
+      then:
+        - logger.log: "Single-Press test activated"
+        - script.execute: script_step_brightness
+        - script.execute: ${sub_on_single_press}
+
+
+# clock input from Home Assistant used to calculate total daily energy
+# https://esphome.io/components/time.html#home-assistant-time-source
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+    update_interval: 7d
+
+
+# https://esphome.io/components/sensor/index.html
+sensor:
+
+  - platform: template
+    name: Red Level
+    id: red_level
+    unit_of_measurement: '%'
+    update_interval: never
+
+  - platform: template
+    name: White Level
+    id: white_level
+    unit_of_measurement: '%'
+    update_interval: never
+
+    # https://esphome.io/components/sensor/template.html
+  - platform: template
+    name: Button Press Duration
+    id: sensor_press_duration
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+    unit_of_measurement: ms
+    icon: mdi:timer-outline
+
+    # https://esphome.io/components/sensor/uptime.html
+  - platform: uptime
+    name: Uptime
+    state_class: total_increasing
+    update_interval: 3600s
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+
+
+# https://esphome.io/components/number/index.html
+# https://esphome.io/components/number/template.html
+number:
+  - platform: template
+    id: error_indic_on_ms
+    internal: true
+    min_value: 100
+    max_value: 2000
+    step: 50
+    initial_value: 350
+    optimistic: true
+
+  - platform: template
+    id: error_indic_off_ms
+    internal: true
+    min_value: 100
+    max_value: 2000
+    step: 50
+    initial_value: 1150
+    optimistic: true
+
+# https://esphome.io/components/select/index.html
+# https://esphome.io/components/select/template.html
+select:
+
+  - platform: template
+    name: Button Config
+    id: select_button
+    optimistic: true
+    options:
+      - Smart Bulbs Mode
+      - Dumb Bulbs Mode
+    initial_option: $default_button_config
+    restore_value: true
+    icon: mdi:circle-double
+    entity_category: config
+    set_action:
+      - script.execute: script_mode_switch
+
+  - platform: template
+    name: White LED Config
+    id: select_wled
+    optimistic: true
+    entity_category: config
+    options:
+      - Power Status
+      - No Automation
+      - Invert Power Status
+      - Error Status
+      - Error and Power
+      - Error and Invert Power
+    initial_option: Power Status
+    restore_value: true
+    icon: mdi:led-on
+    set_action:
+      - script.execute: script_save_changes
+    on_value:
+      - if:
+          condition:
+            - lambda: return ( x == "Error Status" );
+          then:
+            - switch.turn_off: white_led
+      - script.execute: script_set_power_leds
+
+  - platform: template
+    name: Red LED Config
+    id: select_rled
+    optimistic: true
+    entity_category: config
+    options:
+      - Power Status
+      - No Automation
+      - Invert Power Status
+      - Error Status
+      - Error and Power
+      - Error and Invert Power
+    initial_option: Error Status
+    restore_value: true
+    icon: mdi:led-on
+    set_action:
+      - script.execute: script_save_changes
+    on_value:
+      - if:
+          condition:
+            - lambda: return ( x == "Error Status" );
+          then:
+            - switch.turn_off: red_led
+      - script.execute: script_set_power_leds
+
+
+# Send IP Address to HA
+# https://esphome.io/components/text_sensor/wifi_info.html
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: IP Address
+      disabled_by_default: $disable_entities
+
+
+# emulate status_led
+# https://esphome.io/guides/automations.html#interval-component
+interval:
+
+  - interval: 5s
+    then:
+    - lambda: |-
+        if ( ( ((App.get_app_state() & STATUS_LED_ERROR  ) != 0u) ||
+               ((App.get_app_state() & STATUS_LED_WARNING) != 0u) )
+            && !id(blink_status_led).is_running() )
+          id(blink_status_led).execute(350, 1150);

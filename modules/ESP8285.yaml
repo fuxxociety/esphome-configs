@@ -1,0 +1,18 @@
+---
+# Otherwise identical to the ESP8266, the ESP8285 only has 1MiB flash memory.
+# https://docs.platformio.org/en/latest/boards/espressif8266/esp01_1m.html#board-espressif8266-esp01-1m
+#
+substitutions:
+  nameprefix: ''
+  namesuffix: ''
+
+esphome:
+  name: "${nameprefix}${system_name}${namesuffix}"
+  comment: "${device_description}"
+
+esp8266:
+  board: esp01_1m
+  restore_from_flash: true
+
+packages:
+  <<: !include_dir_named components/common

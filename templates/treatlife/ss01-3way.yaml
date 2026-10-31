@@ -1,0 +1,224 @@
+# Treatlife SS01 3-way wall switch (ESP32-C3-12F) driving a LIGHT together with a second switch (BEHAVIOR.md §4).
+# Pins (reference/includes-2025-07/device_configs/treatlife-ss01-3way.yaml): relay IO04, button IO05 (inverted),
+# white status LED IO18 (inverted), red error LED IO19 (inverted), load/power sensor IO03 (inverted).
+#
+# Device file:
+#   substitutions: {name: switch-upstairs-stairwell, friendly_name: Upstairs Stairwell, room_key: upstairs}
+#   packages:      {device: !include templates/treatlife/ss01-3way.yaml}
+#
+# The other leg of the 3-way can flip the load too, so the relay says nothing about the light: the light entity
+# follows the POWER SENSOR. A press flips the relay (always flips the load); HA turning the light on/off flips the
+# relay only when the sensor disagrees. Power loss: relay de-energised (BEHAVIOR.md §0.5).
+substitutions:
+  device_description: Treatlife SS01 3-way light switch
+  relay_pin: GPIO4
+  button_pin: GPIO5
+  status_led_pin: GPIO18
+  error_led_pin: GPIO19
+  load_sensor_pin: GPIO3
+  status_led_id: status_led
+  api_reboot_timeout: 0s
+
+packages:
+  platform: !include ../../common/platforms/esp32c3.yaml
+  button: !include ../../common/button/multiclick.yaml
+
+# GPIO18/19 drive the LEDs on this board, so keep the logger off the USB-Serial-JTAG pins
+logger:
+  hardware_uart: UART0
+
+esphome:
+  on_boot:
+    - priority: 600
+      then:
+        - lambda: |-
+            if (fleet::power_on_reset()) {
+              id(relay_on) = false;
+              ESP_LOGI("power", "power-on reset: relay open");
+            }
+            if (id(relay_on)) id(relay_output).turn_on(); else id(relay_output).turn_off();
+        - script.execute: copy_vals
+
+globals:
+  - id: relay_on
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  - id: from_sensor      # set while the light is following the sensor, so the change doesn't flip the relay
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+
+output:
+  - platform: gpio
+    id: relay_output
+    pin: ${relay_pin}
+  - platform: ledc
+    id: status_led_output
+    pin: ${status_led_pin}
+    inverted: true
+  - platform: ledc
+    id: error_led_output
+    pin: ${error_led_pin}
+    inverted: true
+  - platform: template
+    id: light_output
+    type: binary
+    write_action:
+      - lambda: |-
+          // HA (or a press) asked for state; flip the relay only if the load isn't already there
+          if (id(from_sensor)) return;
+          if (state != id(load_sensor).state) id(flip_relay).execute();
+  - {platform: template, id: bb_led_on, type: float, write_action: [lambda: return;]}
+  - {platform: template, id: bb_led_off, type: float, write_action: [lambda: return;]}
+
+binary_sensor:
+  - platform: gpio
+    id: load_sensor
+    name: Load
+    device_class: light
+    entity_category: diagnostic
+    disabled_by_default: ${disable_entities}
+    pin:
+      number: ${load_sensor_pin}
+      inverted: true
+    filters:
+      - delayed_off: 50ms
+    on_state:
+      - lambda: |-
+          id(from_sensor) = true;
+          if (x) id(main_light).turn_on().perform(); else id(main_light).turn_off().perform();
+          id(from_sensor) = false;
+      - script.execute: copy_vals
+      - if:
+          condition:
+            lambda: return x;
+          then:
+            - script.execute: event_switch_on
+          else:
+            - script.execute: event_switch_off
+
+light:
+  - platform: binary
+    id: main_light
+    name: None
+    output: light_output
+    restore_mode: ALWAYS_OFF     # state comes from the load sensor at boot
+
+  - platform: monochromatic
+    id: status_led
+    name: Status LED
+    output: status_led_output
+    default_transition_length: 333ms
+    disabled_by_default: true
+  - platform: monochromatic
+    id: error_led
+    name: Error LED
+    output: error_led_output
+    default_transition_length: 0s
+    disabled_by_default: true
+  - platform: monochromatic
+    id: led_on_cfg
+    name: Status LED On Brightness
+    output: bb_led_on
+    entity_category: config
+    default_transition_length: 0s
+    restore_mode: RESTORE_DEFAULT_ON
+    initial_state: {state: true, brightness: 100%}
+    on_state:
+      - script.execute: copy_vals
+  - platform: monochromatic
+    id: led_off_cfg
+    name: Status LED Off Brightness
+    output: bb_led_off
+    entity_category: config
+    default_transition_length: 0s
+    restore_mode: RESTORE_DEFAULT_ON
+    initial_state: {state: true, brightness: 10%}
+    on_state:
+      - script.execute: copy_vals
+
+switch:
+  - platform: template
+    id: no_hass
+    name: No HASS
+    icon: mdi:toggle-switch-off-outline
+    entity_category: config
+    disabled_by_default: ${disable_entities}
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_on:
+      - lambda: id(api_server)->set_reboot_timeout(0);
+    on_turn_off:
+      - lambda: id(api_server)->set_reboot_timeout(900000);
+
+interval:
+  - interval: 1500ms
+    then:
+      - if:
+          condition:
+            lambda: return (App.get_app_state() & (STATUS_LED_ERROR | STATUS_LED_WARNING)) != 0;
+          then:
+            - light.turn_on: {id: error_led, brightness: 100%, transition_length: 0s}
+            - delay: 350ms
+            - light.turn_off: {id: error_led, transition_length: 0s}
+
+script:
+  - id: flip_relay
+    mode: queued
+    then:
+      - lambda: |-
+          id(relay_on) = !id(relay_on);
+          if (id(relay_on)) id(relay_output).turn_on(); else id(relay_output).turn_off();
+          ESP_LOGI("relay", "flipped -> %d", id(relay_on));
+
+  - id: copy_vals
+    mode: restart
+    then:
+      - lambda: |-
+          if (id(main_button).state) return;
+          auto &cfg = id(load_sensor).state ? id(led_on_cfg)->current_values : id(led_off_cfg)->current_values;
+          const float b = cfg.is_on() ? cfg.get_brightness() : 0.0f;
+          auto call = id(status_led).make_call();
+          call.set_state(b > 0.0f);
+          if (b > 0.0f) call.set_brightness(b);
+          call.perform();
+  - id: led_restore
+    then:
+      - script.execute: copy_vals
+
+  - id: gesture_single
+    then:
+      - script.execute: flip_relay
+      - lambda: |-
+          id(ev_mode) = "Switched";
+          id(ev_brightness) = id(load_sensor).state ? "off" : "bright";   // the state it is flipping to
+      - script.execute: event_single
+  - id: gesture_double
+    then:
+      - lambda: id(ev_mode) = "Switched";
+      - script.execute: event_double
+  - id: gesture_quad
+    then:
+      - lambda: id(ev_mode) = "Switched";
+      - script.execute: event_quad
+  - id: gesture_hold
+    then:
+      - lambda: id(ev_mode) = "Switched";
+      - script.execute: event_hold
+  # no relay modes on a 3-way: the 3–10 s hold is passed to HA as an event
+  - id: gesture_mode
+    then:
+      - lambda: id(ev_mode) = "Switched";
+      - script.execute: event_switchmode
+
+  - id: event_switch_on
+    then:
+      - homeassistant.event:
+          event: esphome.switch
+          data: {devicename: '${room_key}', room: '${room_key}', name_friendly: '${friendly_name}', action: switch_on, mode: Switched}
+  - id: event_switch_off
+    then:
+      - homeassistant.event:
+          event: esphome.switch
+          data: {devicename: '${room_key}', room: '${room_key}', name_friendly: '${friendly_name}', action: switch_off, mode: Switched}

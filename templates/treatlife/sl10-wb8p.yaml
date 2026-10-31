@@ -1,0 +1,5 @@
+# Treatlife SL10 bulb with the Tuya WB8P module (BK7231T).
+#   packages: {device: !include templates/treatlife/sl10-wb8p.yaml}
+packages:
+  platform: !include ../../common/platforms/bk7231t.yaml
+  bulb: !include sl10-rgbw.yaml

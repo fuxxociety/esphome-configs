@@ -1,0 +1,7 @@
+substitutions:
+  name: bulb-masterbed-shelf
+  friendly_name: Master Bed Shelf
+  room_key: masterbed_shelf   # standalone, no wall switch
+
+packages:
+  device: !include templates/kauf/rgbww-bulb.yaml

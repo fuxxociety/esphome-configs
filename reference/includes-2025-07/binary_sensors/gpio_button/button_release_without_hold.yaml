@@ -1,0 +1,9 @@
+---
+# definition for release without hold
+timing:
+  - ON for at most $sub_hold_time
+then:
+  - logger.log: "Detected Release Without Hold"
+  - lambda: |-
+      id(script_hass_toggle_release_without_hold).execute();
+      id($sub_on_release_without_hold).execute();

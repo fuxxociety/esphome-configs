@@ -1,0 +1,30 @@
+# One brightness-only PWM light channel on an ESP32 (ledc). Include once per channel with vars:
+#   ch1: !include {file: ../../common/light/pwm-channel.yaml, vars: {ch: '1', ch_pin: GPIO19, ch_name: GPIO19}}
+# optional vars: ch_restore (default RESTORE_AND_ON, as the growlights ran)
+# Adds: output pwm_ch<ch>, light light_ch<ch> ("<ch_name>", white effects), sensor "<ch_name> Brightness" (%).
+defaults:
+  ch_restore: RESTORE_AND_ON
+
+output:
+  - platform: ledc
+    id: pwm_ch${ch}
+    pin: ${ch_pin}
+
+light:
+  - platform: monochromatic
+    id: light_ch${ch}
+    name: ${ch_name}
+    output: pwm_ch${ch}
+    restore_mode: ${ch_restore}
+    effects: !include ../effects/white.yaml
+
+sensor:
+  - platform: template
+    id: brightness_ch${ch}
+    name: ${ch_name} Brightness
+    unit_of_measurement: '%'
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      const auto &v = id(light_ch${ch}).current_values;
+      return v.is_on() ? v.get_brightness() * 100.0f : 0.0f;

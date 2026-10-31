@@ -1,0 +1,34 @@
+# Treatlife SL10 A19 RGBW bulb (Tuya WB8P / CB8P module, libretiny PWM). Chip comes from the wrapper:
+# sl10-wb8p.yaml (BK7231T) or sl10-cb8p.yaml (BK7231N). Not included by device files directly.
+substitutions:
+  device_description: Treatlife SL10 RGBW bulb
+  red_pin: P7
+  green_pin: P8
+  blue_pin: P9
+  white_pin: P24
+
+packages:
+  bulb: !include ../../common/light/bulb.yaml
+
+output:
+  - {platform: libretiny_pwm, id: output_red, pin: '${red_pin}', frequency: 200 Hz, max_power: 85%}
+  - {platform: libretiny_pwm, id: output_green, pin: '${green_pin}', frequency: 200 Hz, max_power: 85%}
+  - {platform: libretiny_pwm, id: output_blue, pin: '${blue_pin}', frequency: 200 Hz, max_power: 85%}
+  - {platform: libretiny_pwm, id: output_white, pin: '${white_pin}', frequency: 400 Hz, max_power: 85%}
+
+light:
+  - platform: rgbw
+    id: main_light
+    name: None
+    red: output_red
+    green: output_green
+    blue: output_blue
+    white: output_white
+    color_interlock: true
+    restore_mode: RESTORE_DEFAULT_ON
+    default_transition_length: 250ms
+    on_turn_on:
+      - script.execute: bulb_event_on
+    on_turn_off:
+      - script.execute: bulb_event_off
+    effects: !include ../../common/effects/color.yaml

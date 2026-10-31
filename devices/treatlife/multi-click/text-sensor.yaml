@@ -1,0 +1,17 @@
+---
+platform: template
+name: ${friendly_name}
+id: ${name}
+icon: "mdi:toggle-switch"
+on_value:
+  then:
+    - if:
+        condition:
+          text_sensor.state:
+            id: ${name}
+            state: ""
+        else:
+          - delay: 20ms
+          - text_sensor.template.publish:
+              id: ${name}
+              state: !lambda 'return "";'

@@ -1,0 +1,231 @@
+substitutions:
+  device_name: frontentry            # **** CHANGE DEVICE NAME TO SOMETHING UNIQUE PER DEVICE.  RENAME YAML FILE TO SAME NAME.    ****
+  device_number: ""                  # trailing number for multiple devices in a fixture
+                                     # **** USE DASHES (-) INSTEAD OF SPACES OR UNDERSCORE (_).  USE ONLY LOWER CASE LETTERS.     ****
+  friendly_name: 'Front Entryway'    # **** CHANGE FRIENDLY NAME TO SOMETHING UNIQUE PER DEVICE                                   ****
+
+  disable_entities:  "true"     # set to "false" to have all entities show up in Home Assistant automatically
+  disable_webserver: "true"    # set to "true" to disable the webserver listening on port 80.
+
+packages:
+  mcu: !include includes/mcu/ESP8266.yaml
+
+output:
+  - platform: template
+    id: bit_bucket
+    type: float
+    write_action:
+      - script.execute: script_do_nothing
+
+light:
+  - platform: rgbww
+    name: Main Light
+    id: main_light
+    red: bit_bucket
+    green: bit_bucket
+    blue: bit_bucket
+    warm_white: bit_bucket
+    cold_white: bit_bucket
+    default_transition_length: 0s
+    restore_mode: RESTORE_DEFAULT_ON
+    initial_state:
+      state: off
+      color_mode: RGB_COLD_WARM_WHITE
+      red: 0%
+      green: 0%
+      blue: 0%
+      cold_white: 0%
+      warm_white: 0%
+      brightness: 0%
+    on_state:
+      then:
+        - homeassistant.event:
+            event: esphome.switch_light
+            data:
+              state: !lambda 'return id(main_light)->current_values.is_on() ? "on" : "off";'
+              brightness: !lambda 'return id(main_light)->current_values.get_brightness();'
+              red: !lambda 'return id(main_light)->current_values.get_red();'
+              green: !lambda 'return id(main_light)->current_values.get_green();'
+              blue: !lambda 'return id(main_light)->current_values.get_blue();'
+              warm_white: !lambda 'return id(main_light)->current_values.get_warm_white();'
+              cold_white: !lambda 'return id(main_light)->current_values.get_cold_white();'
+
+  - platform: rgbww
+    name: Preset 1
+    id: preset_1
+    red: bit_bucket
+    green: bit_bucket
+    blue: bit_bucket
+    warm_white: bit_bucket
+    cold_white: bit_bucket
+    entity_category: config
+    default_transition_length: 0s
+    restore_mode: RESTORE_DEFAULT_ON
+    effects:
+      - lambda:
+          name: Disabled
+          update_interval: never
+          lambda: return;
+    initial_state:
+      state: on
+      color_mode: RGB_COLD_WARM_WHITE
+      red: 0%
+      green: 0%
+      blue: 0%
+      cold_white: 100%
+      warm_white: 100%
+      brightness: 75%
+
+  - platform: rgbww
+    name: Preset 2
+    id: preset_2
+    red: bit_bucket
+    green: bit_bucket
+    blue: bit_bucket
+    warm_white: bit_bucket
+    cold_white: bit_bucket
+    entity_category: config
+    default_transition_length: 0s
+    restore_mode: RESTORE_DEFAULT_ON
+    effects:
+      - lambda:
+          name: Disabled
+          update_interval: never
+          lambda: return;
+    initial_state:
+      state: on
+      color_mode: RGB_COLD_WARM_WHITE
+      red: 0%
+      green: 100%
+      blue: 0%
+      cold_white: 100%
+      warm_white: 100%
+      brightness: 50%
+
+  - platform: rgbww
+    name: Preset 3
+    id: preset_3
+    red: bit_bucket
+    green: bit_bucket
+    blue: bit_bucket
+    warm_white: bit_bucket
+    cold_white: bit_bucket
+    entity_category: config
+    default_transition_length: 0s
+    restore_mode: RESTORE_DEFAULT_ON
+    effects:
+      - lambda:
+          name: Disabled
+          update_interval: never
+          lambda: return;
+    initial_state:
+      state: on
+      color_mode: RGB_COLD_WARM_WHITE
+      red: 0%
+      green: 100%
+      blue: 0%
+      cold_white: 100%
+      warm_white: 100%
+      brightness: 25%
+
+  - platform: rgbww
+    name: Preset 4
+    id: preset_4
+    red: bit_bucket
+    green: bit_bucket
+    blue: bit_bucket
+    warm_white: bit_bucket
+    cold_white: bit_bucket
+    entity_category: config
+    default_transition_length: 0s
+    restore_mode: RESTORE_DEFAULT_ON
+    effects:
+      - lambda:
+          name: Disabled
+          update_interval: never
+          lambda: return;
+    initial_state:
+      state: on
+      color_mode: RGB_COLD_WARM_WHITE
+      red: 100%
+      green: 0%
+      blue: 0%
+      cold_white: 0%
+      warm_white: 0%
+      brightness: 75%
+
+select:
+  - platform: template
+    name: "Light Preset"
+    id: preset_select
+    optimistic: true
+    options:
+      - "Preset 0"
+      - "Preset 1"
+      - "Preset 2"
+      - "Preset 3"
+      - "Preset 4"
+    on_value:
+      then:
+        - lambda: |-
+            // Check which preset was selected and apply its settings to main_light.
+            if (x == "Preset 0") {
+              id(main_light).turn_off();
+            } else if (x == "Preset 1") {
+              auto call = id(main_light).make_call();
+              call.set_state(id(preset_1)->current_values.is_on());
+              call.set_brightness(id(preset_1)->current_values.get_brightness());
+              call.set_rgb(
+                id(preset_1)->current_values.get_red(),
+                id(preset_1)->current_values.get_green(),
+                id(preset_1)->current_values.get_blue());
+              call.set_cold_white_if_supported(
+                id(preset_1)->current_values.get_cold_white());
+              call.set_warm_white_if_supported( 
+                id(preset_1)->current_values.get_warm_white());
+              call.perform();
+            } else if (x == "Preset 2") {
+              auto call = id(main_light).make_call();
+              call.set_state(id(preset_2)->current_values.is_on());
+              call.set_brightness(id(preset_2)->current_values.get_brightness());
+              call.set_rgb(
+                id(preset_2)->current_values.get_red(),
+                id(preset_2)->current_values.get_green(),
+                id(preset_2)->current_values.get_blue());
+              call.set_cold_white_if_supported(
+                id(preset_2)->current_values.get_cold_white());
+              call.set_warm_white_if_supported( 
+                id(preset_2)->current_values.get_warm_white());
+              call.perform();
+            } else if (x == "Preset 3") {
+              auto call = id(main_light).make_call();
+              call.set_state(id(preset_3)->current_values.is_on());
+              call.set_brightness(id(preset_3)->current_values.get_brightness());
+              call.set_rgb(
+                id(preset_3)->current_values.get_red(),
+                id(preset_3)->current_values.get_green(),
+                id(preset_3)->current_values.get_blue());
+              call.set_cold_white_if_supported(
+                id(preset_3)->current_values.get_cold_white());
+              call.set_warm_white_if_supported( 
+                id(preset_3)->current_values.get_warm_white());
+              call.perform();
+            } else if (x == "Preset 4") {
+              auto call = id(main_light).make_call();
+              call.set_state(id(preset_4)->current_values.is_on());
+              call.set_brightness(id(preset_4)->current_values.get_brightness());
+              call.set_rgb(
+                id(preset_4)->current_values.get_red(),
+                id(preset_4)->current_values.get_green(),
+                id(preset_4)->current_values.get_blue());
+              call.set_cold_white_if_supported(
+                id(preset_4)->current_values.get_cold_white());
+              call.set_warm_white_if_supported(
+                id(preset_4)->current_values.get_warm_white());
+              call.perform();
+            }
+
+script:
+  - id: script_do_nothing
+    then:
+      - lambda: return;

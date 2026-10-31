@@ -1,0 +1,9 @@
+---
+# store press time in ms
+then:
+  - logger.log: "Button Pressed"
+  - lambda: |-
+      // store time of press and clear duration sensor
+      id(global_press_time) = millis();
+      id(sensor_press_duration).publish_state(0);
+  - script.execute: $sub_on_press

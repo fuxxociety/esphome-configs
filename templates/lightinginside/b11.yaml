@@ -1,0 +1,13 @@
+# LightingInside B11 candelabra RGBWW bulb.  packages: {device: !include templates/lightinginside/b11.yaml}
+substitutions:
+  device_description: LightingInside B11 RGBWW candelabra bulb
+  channel_red: '1'
+  channel_green: '2'
+  channel_blue: '0'
+  channel_cw: '4'
+  channel_ww: '3'
+  power_color: '3'
+  power_white: '5'
+
+packages:
+  bulb: !include sm2335-rgbww.yaml

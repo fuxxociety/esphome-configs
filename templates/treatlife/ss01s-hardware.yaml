@@ -1,0 +1,20 @@
+# Treatlife SS01S single-pole wall switch hardware. Behaviour: common/switch/core.yaml. The chip platform comes from the
+# including template: esp8266 (ESP-12F, 4 MB: ss01s-light/-fan) or esp8285 (1 MB layout: ss01s-light-1m).
+# Relay GPIO12, button GPIO13 (inverted), white status LED GPIO4 (inverted), red error LED GPIO5 (inverted).
+substitutions:
+  relay_pin: GPIO12
+  button_pin: GPIO13
+  status_led_pin: GPIO4
+  error_led_pin: GPIO5
+
+packages:
+  core: !include ../../common/switch/core.yaml
+  led: !include ../../common/switch/led-onoff.yaml
+
+esp8266:
+  restore_from_flash: true   # Relay Config must survive a power cut
+
+output:
+  - {platform: gpio, id: relay_output, pin: '${relay_pin}'}
+  - {platform: esp8266_pwm, id: status_led_output, pin: '${status_led_pin}', frequency: 100 Hz, inverted: true, min_power: 10%}
+  - {platform: esp8266_pwm, id: error_led_output, pin: '${error_led_pin}', frequency: 100 Hz, inverted: true}

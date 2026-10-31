@@ -1,0 +1,10 @@
+substitutions:
+  name: fan-masterbed-pedestal
+  friendly_name: Master Bed Pedestal
+  room_key: masterbed_pedestal
+
+packages:
+  device: !include templates/diy/esp32-ir-pedestal-fan.yaml
+
+wifi:
+  use_address: 10.10.32.105   # as the live config (until DNS knows the new hostname)

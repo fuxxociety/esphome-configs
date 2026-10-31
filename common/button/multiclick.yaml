@@ -1,0 +1,200 @@
+# The one gesture engine for every wall switch (BEHAVIOR.md §5).
+#
+#   single  ON ≤ hold, then quiet ≥ gap          → script gesture_single
+#   double  2 short presses, then quiet ≥ gap     → script gesture_double
+#   quad    4 short presses, then quiet ≥ gap     → script gesture_quad
+#   hold    released after hold_ms … mode_ms      → script gesture_hold
+#   mode    released after mode_ms … reset_ms     → script gesture_mode   (LED flashes slow from mode_ms while held)
+#   reset   released after reset_ms               → reboot                (LED flashes fast from reset_ms while held)
+# Patterns are exclusive: a quad never also fires a double, three presses fire nothing.
+#
+# The including template MUST define scripts: gesture_single, gesture_double, gesture_quad, gesture_hold,
+# gesture_mode, led_restore (put the status LED back to its normal state after hold feedback), and a light whose id
+# is ${status_led_id}. Before executing an event_* script it sets globals ev_mode / ev_brightness, which go
+# into the event data.
+#
+# Events (what the HA automations listen for; devicename = room_key, see BEHAVIOR.md §0/§1). ESPHome adds HA's own
+# device_id to every event automatically, so it is not sent.
+substitutions:
+  button_inverted: 'true'
+  button_pullup: 'true'
+  hold_ms: '750'
+  gap_ms: '333'
+  mode_ms: '3000'
+  reset_ms: '10000'
+  button_debounce: 10ms   # the plugs' buttons bounce: their templates use 100 ms (as their Kauf configs did)
+
+globals:
+  - id: press_started
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: ev_mode
+    type: std::string
+    restore_value: false
+  - id: ev_brightness
+    type: std::string
+    restore_value: false
+
+binary_sensor:
+  - platform: gpio
+    id: main_button
+    name: Button
+    pin:
+      number: ${button_pin}
+      inverted: ${button_inverted}
+      mode:
+        input: true
+        pullup: ${button_pullup}
+    filters:
+      - delayed_on: ${button_debounce}
+      - delayed_off: ${button_debounce}
+    on_press:
+      - lambda: id(press_started) = millis();
+      - script.execute: hold_feedback
+    on_release:
+      - script.stop: hold_feedback
+      - script.stop: led_flash
+      - lambda: |-
+          const uint32_t held = millis() - id(press_started);
+          id(sensor_press_duration).publish_state(held);
+          if (held >= ${reset_ms}) {
+            id(gesture_reset).execute();
+          } else if (held >= ${mode_ms}) {
+            id(gesture_mode).execute();
+            id(led_restore).execute();
+          } else if (held >= ${hold_ms}) {
+            id(gesture_hold).execute();
+          }
+    on_multi_click:
+      - timing:
+          - ON for at most ${hold_ms}ms
+          - OFF for at least ${gap_ms}ms
+        invalid_cooldown: 1500ms
+        then:
+          - script.execute: gesture_single
+      - timing:
+          - ON for at most ${hold_ms}ms
+          - OFF for at most ${gap_ms}ms
+          - ON for at most ${hold_ms}ms
+          - OFF for at least ${gap_ms}ms
+        then:
+          - script.execute: gesture_double
+      - timing:
+          - ON for at most ${hold_ms}ms
+          - OFF for at most ${gap_ms}ms
+          - ON for at most ${hold_ms}ms
+          - OFF for at most ${gap_ms}ms
+          - ON for at most ${hold_ms}ms
+          - OFF for at most ${gap_ms}ms
+          - ON for at most ${hold_ms}ms
+          - OFF for at least ${gap_ms}ms
+        then:
+          - script.execute: gesture_quad
+
+sensor:
+  - platform: template
+    id: sensor_press_duration
+    name: Button Press Duration
+    unit_of_measurement: ms
+    icon: mdi:timer-outline
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    disabled_by_default: ${disable_entities}
+    update_interval: never
+
+script:
+  # LED feedback while the button is held: slow flash = "release now to change mode", fast = "release to reboot"
+  - id: hold_feedback
+    mode: restart
+    then:
+      - delay: ${mode_ms}ms
+      - script.execute:
+          id: led_flash
+          period_ms: 400
+      - delay: !lambda return ${reset_ms} - ${mode_ms};
+      - script.stop: led_flash
+      - script.execute:
+          id: led_flash
+          period_ms: 100
+
+  - id: led_flash
+    mode: restart
+    parameters:
+      period_ms: int
+    then:
+      - while:
+          condition:
+            binary_sensor.is_on: main_button
+          then:
+            - light.turn_on:
+                id: ${status_led_id}
+                brightness: 100%
+                transition_length: 0s
+            - delay: !lambda return period_ms;
+            - light.turn_off:
+                id: ${status_led_id}
+                transition_length: 0s
+            - delay: !lambda return period_ms;
+
+  - id: gesture_reset
+    then:
+      - logger.log: "Held past reset_ms: rebooting"
+      - button.press: restart_button
+
+  - id: event_single
+    then:
+      - homeassistant.event:
+          event: esphome.single
+          data:
+            devicename: ${room_key}
+            room: ${room_key}
+            name_friendly: ${friendly_name}
+            action: single_press
+            mode: !lambda return id(ev_mode);
+            brightness: !lambda return id(ev_brightness);
+
+  - id: event_double
+    then:
+      - homeassistant.event:
+          event: esphome.double
+          data:
+            devicename: ${room_key}
+            room: ${room_key}
+            name_friendly: ${friendly_name}
+            action: double_press
+            mode: !lambda return id(ev_mode);
+
+  - id: event_quad
+    then:
+      - homeassistant.event:
+          event: esphome.quad
+          data:
+            devicename: ${room_key}
+            room: ${room_key}
+            name_friendly: ${friendly_name}
+            action: quad_press
+            mode: !lambda return id(ev_mode);
+
+  # today's "Wall Switch Hold Event Triggers" listens for esphome.single with action: hold
+  - id: event_hold
+    then:
+      - homeassistant.event:
+          event: esphome.single
+          data:
+            devicename: ${room_key}
+            room: ${room_key}
+            name_friendly: ${friendly_name}
+            action: hold
+            mode: !lambda return id(ev_mode);
+
+  - id: event_switchmode
+    then:
+      - homeassistant.event:
+          event: esphome.switchmode
+          data:
+            devicename: ${room_key}
+            room: ${room_key}
+            name_friendly: ${friendly_name}
+            action: cycle_switch_mode
+            mode: !lambda return id(ev_mode);

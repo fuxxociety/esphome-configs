@@ -1,0 +1,82 @@
+---
+platform: gpio
+pin:
+  number: ${gpio_pin}
+  mode: INPUT_PULLUP
+name: '${friendly_name} Button'
+id: raw_switch_state
+disabled_by_default: true
+filters:
+  - invert:
+  - delayed_on: 10ms
+  - delayed_off: 10ms
+on_multi_click:
+  - timing:
+      - ON for at most 0.5s
+      - OFF for at least 0.2s
+    then:
+      - light.toggle: 'light1'
+      - homeassistant.event:
+          event: esphome.button
+          data:
+            device: ${friendly_name}
+            id: button
+            action: single
+      - text_sensor.template.publish:
+          id: ${name}
+          state: !lambda 'return "single";'
+  - timing:
+      - ON for at most 0.5s
+      - OFF for at most 0.5s
+      - ON for at most 0.5s
+      - OFF for at least 0.2s
+    then:
+      - homeassistant.event:
+          event: esphome.button
+          data:
+            device: ${name}
+            id: button
+            action: double
+      - text_sensor.template.publish:
+          id: ${name}
+          state: !lambda 'return "double";'
+  - timing:
+      - ON for at most 0.5s
+      - OFF for at most 0.5s
+      - ON for at most 0.5s
+      - OFF for at most 0.5s
+      - ON for at most 0.5s
+      - OFF for at least 0.2s
+    then:
+      - homeassistant.event:
+          event: esphome.button
+          data:
+            device: ${name}
+            id: button
+            action: triple
+      - text_sensor.template.publish:
+          id: ${name}
+          state: !lambda 'return "triple";'
+  - timing:
+      - ON for at most 0.5s
+      - OFF for at most 0.5s
+      - ON for at most 0.5s
+      - OFF for at most 0.5s
+      - ON for at most 0.5s
+      - OFF for at most 0.5s
+      - ON for at most 0.5s
+      - OFF for at least 0.1s
+    then:
+      - button.press: 'restart_button'
+  - timing:
+      - 'ON for at least ${button_hold}'
+    then:
+      - homeassistant.event:
+          event: esphome.button
+          data:
+            device: ${name}
+            id: button
+            action: hold
+      - text_sensor.template.publish:
+          id: ${name}
+          state: !lambda 'return "hold";'

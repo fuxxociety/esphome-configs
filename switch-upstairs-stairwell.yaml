@@ -1,0 +1,7 @@
+substitutions:
+  name: switch-upstairs-stairwell
+  friendly_name: Upstairs Stairwell
+  room_key: upstairs
+
+packages:
+  device: !include templates/treatlife/ss01-3way.yaml

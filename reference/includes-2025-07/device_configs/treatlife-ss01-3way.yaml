@@ -1,0 +1,60 @@
+# D2 GPIO04 / IO18 : white led (inverted)
+# D1 GPIO05 / IO19 : red led (inverted)
+# D6 GPIO12 / IO04 : relay
+# D7 GPIO13 / IO05 : button (inverted)
+# D5 GPIO14 / IO03 : power/usage sensor (inverted)
+# ##################################
+substitutions:
+  device_type: 'switch-'
+  device_description: 'Treatlife SS01 3-way Wall Switch'
+
+  appliance_name: Treatlife.SS01
+  appliance_model: "ESP32-C3-12F"
+
+
+binary_sensor:
+  - platform: gpio
+    id: sense5
+    name: sense5
+    pin:
+      number: GPIO5
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+  - platform: gpio
+    id: power_sensor
+    name: power_sensor
+    pin:
+      number: GPIO3
+      inverted: True
+    filters:
+      - delayed_off: 50ms
+#    on_press:
+#      - light.turn_off: white_led
+#    on_release:
+#      - light.turn_on: white_led
+  - platform: gpio
+    id: sense18
+    name: sense18
+    pin:
+      number: GPIO18
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+  - platform: gpio
+    id: sense19
+    name: sense19
+    pin:
+      number: GPIO19
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+
+switch:
+  - platform: gpio
+    id: relay
+    name: Relay
+    pin: GPIO4

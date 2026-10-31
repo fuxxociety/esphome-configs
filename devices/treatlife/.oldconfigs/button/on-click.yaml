@@ -1,0 +1,5 @@
+    on_click:
+      min_length: .5s
+      max_length: 2s
+      then:
+        - switch.toggle: fixture

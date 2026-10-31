@@ -1,0 +1,8 @@
+# was "colorcycle" (a make_call lambda): dim white -> green -> blue -> red, 10 s fades
+strobe:
+  name: Color Cycle
+  colors:
+    - {state: true, brightness: 100%, red: 20%, green: 20%, blue: 20%, transition_length: 10s, duration: 10s}
+    - {state: true, brightness: 100%, red: 0%, green: 100%, blue: 0%, transition_length: 10s, duration: 10s}
+    - {state: true, brightness: 100%, red: 0%, green: 0%, blue: 100%, transition_length: 10s, duration: 10s}
+    - {state: true, brightness: 100%, red: 100%, green: 0%, blue: 0%, transition_length: 10s, duration: 10s}

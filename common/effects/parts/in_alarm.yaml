@@ -1,0 +1,11 @@
+strobe:
+  name: In Alarm
+  colors:
+    - {state: true, brightness: 100%, red: 100%, green: 0%, blue: 0%, duration: 150ms}
+    - {state: false, duration: 100ms}
+    - {state: true, brightness: 100%, red: 100%, green: 0%, blue: 0%, duration: 150ms}
+    - {state: false, duration: 100ms}
+    - {state: true, brightness: 100%, red: 0%, green: 0%, blue: 100%, duration: 150ms}
+    - {state: false, duration: 100ms}
+    - {state: true, brightness: 100%, red: 0%, green: 0%, blue: 100%, duration: 150ms}
+    - {state: false, duration: 100ms}

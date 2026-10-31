@@ -1,0 +1,91 @@
+# Sengled B1C-NB7 smart plug, chip swapped to an ESP8266 (esp01_1m), powering a LAMP; its button behaves exactly like
+# a wall switch (common/switch/core.yaml). Has BL0937 power monitoring.
+# Pins from the previous config (kauf-plug-44ed55.yaml, Kauf PLF10 firmware): relay GPIO4, button GPIO13 (inverted,
+# 100 ms), blue LED GPIO2 = status, red LED GPIO0 = error (both inverted), BL0937 SEL GPIO12 (inverted) CF GPIO5 CF1 GPIO14.
+# Calibration is per unit: the device file sets the *_cal_* pairs (see plug-craftroom-wash-2.yaml).
+substitutions:
+  device_description: Sengled B1C-NB7 smart plug (ESP8266, lamp)
+  relay_pin: GPIO4
+  button_pin: GPIO13
+  status_led_pin: GPIO2
+  error_led_pin: GPIO0
+  button_debounce: 100ms
+  pm_sel_pin: GPIO12
+  pm_cf_pin: GPIO5
+  pm_cf1_pin: GPIO14
+  current_resistor: '0.002'
+  voltage_divider: '1981'
+  pm_update_interval: 10s
+  in_use_threshold: '3'       # W
+
+packages:
+  platform: !include ../../common/platforms/esp8285.yaml
+  core: !include ../../common/switch/core.yaml
+  led: !include ../../common/switch/led-onoff.yaml
+  load: !include ../../common/switch/load-light.yaml
+
+esp8266:
+  restore_from_flash: true   # Relay Config must survive a power cut
+  early_pin_init: false      # as before: don't glitch the relay pin at boot
+
+output:
+  - {platform: gpio, id: relay_output, pin: '${relay_pin}'}
+  - {platform: esp8266_pwm, id: status_led_output, pin: '${status_led_pin}', frequency: 200 Hz, inverted: true}
+  - {platform: esp8266_pwm, id: error_led_output, pin: '${error_led_pin}', frequency: 200 Hz, inverted: true}
+
+binary_sensor:
+  - platform: template
+    id: in_use
+    name: Device In Use
+
+sensor:
+  - platform: hlw8012
+    id: hlw_main
+    model: BL0937
+    sel_pin: {number: '${pm_sel_pin}', inverted: true}
+    cf_pin: ${pm_cf_pin}
+    cf1_pin: ${pm_cf1_pin}
+    current_resistor: ${current_resistor}
+    voltage_divider: ${voltage_divider}
+    update_interval: ${pm_update_interval}
+    power:
+      id: wattage
+      name: Power
+      unit_of_measurement: W
+      state_class: measurement
+      filters:
+        - calibrate_linear:
+            - ${power_cal_1_in} -> ${power_cal_1_out}
+            - ${power_cal_2_in} -> ${power_cal_2_out}
+        - lambda: |-
+            // filter out extremely large values that are incorrect
+            if (x > 5000.0f) return {};
+            return x;
+      on_value:
+        - lambda: id(in_use).publish_state(x >= ${in_use_threshold});
+    current:
+      id: current
+      name: Current
+      unit_of_measurement: A
+      state_class: measurement
+      filters:
+        - calibrate_linear:
+            - ${current_cal_1_in} -> ${current_cal_1_out}
+            - ${current_cal_2_in} -> ${current_cal_2_out}
+    voltage:
+      id: voltage
+      name: Voltage
+      unit_of_measurement: V
+      state_class: measurement
+      filters:
+        - calibrate_linear:
+            - ${voltage_cal_1_in} -> ${voltage_cal_1_out}
+            - ${voltage_cal_2_in} -> ${voltage_cal_2_out}
+  - platform: total_daily_energy
+    name: Total Daily Energy
+    power_id: wattage
+    time_id: time_homeassistant
+    unit_of_measurement: kWh
+    state_class: total_increasing
+    filters:
+      - multiply: 0.001   # Wh -> kWh

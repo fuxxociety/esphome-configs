@@ -1,0 +1,8 @@
+# https://esphome.io/components/logger.html
+# UART logging off by default: several devices use the UART pins (DS01C tuya MCU).
+substitutions:
+  logger_baud: '0'
+
+logger:
+  id: component_logger
+  baud_rate: ${logger_baud}

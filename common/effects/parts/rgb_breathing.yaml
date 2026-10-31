@@ -1,0 +1,28 @@
+# was a lambda: fade down to 1 % in the current colour, then up into the next one (all 12; the old one reached 3)
+strobe:
+  name: RGB Breathing
+  colors:
+    - {state: true, brightness: 1%, red: 100%, green: 0%, blue: 50%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 100%, red: 100%, green: 0%, blue: 0%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 1%, red: 100%, green: 0%, blue: 0%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 100%, red: 100%, green: 50%, blue: 0%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 1%, red: 100%, green: 50%, blue: 0%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 100%, red: 100%, green: 100%, blue: 0%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 1%, red: 100%, green: 100%, blue: 0%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 100%, red: 50%, green: 100%, blue: 0%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 1%, red: 50%, green: 100%, blue: 0%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 100%, red: 0%, green: 100%, blue: 0%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 1%, red: 0%, green: 100%, blue: 0%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 100%, red: 0%, green: 100%, blue: 50%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 1%, red: 0%, green: 100%, blue: 50%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 100%, red: 0%, green: 100%, blue: 100%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 1%, red: 0%, green: 100%, blue: 100%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 100%, red: 0%, green: 50%, blue: 100%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 1%, red: 0%, green: 50%, blue: 100%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 100%, red: 0%, green: 0%, blue: 100%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 1%, red: 0%, green: 0%, blue: 100%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 100%, red: 50%, green: 0%, blue: 100%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 1%, red: 50%, green: 0%, blue: 100%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 100%, red: 100%, green: 0%, blue: 100%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 1%, red: 100%, green: 0%, blue: 100%, transition_length: 15s, duration: 16s}
+    - {state: true, brightness: 100%, red: 100%, green: 0%, blue: 50%, transition_length: 15s, duration: 16s}

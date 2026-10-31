@@ -1,0 +1,21 @@
+api:
+  services:
+    - service: variable_brightness
+      variables:
+        brightness: string
+      then:
+        - logger.log: "Received brightness command"
+        - if:
+            condition:
+              lambda: 'return brightness == "off";'
+            then:
+              - script.execute: effect_off
+
+
+# CW/WW effects
+# https://esphome.io/guides/automations.html#script-component
+script:
+  - id: effect_off
+    then:
+      - light.turn_off:
+          id: ${friendly_type}${device_num}

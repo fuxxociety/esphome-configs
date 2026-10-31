@@ -1,0 +1,7 @@
+substitutions:
+  name: bulb-masterbath-toilet-1
+  friendly_name: Master Bath Toilet 1
+  room_key: masterbath_toilet
+
+packages:
+  device: !include templates/lightinginside/a19.yaml

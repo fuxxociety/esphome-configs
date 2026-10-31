@@ -1,0 +1,26 @@
+substitutions:
+  nameprefix: ''   # live hostname has no switch- prefix
+  system_name: thomas-closet-light-switch   # device hostname = live name (ESPHome 2026 migration)
+  namesuffix: '-1'   # device hostname = live name (ESPHome 2026 migration)
+  base_node_name: thomas-closet-light-switch    # **** CHANGE DEVICE NAME TO SOMETHING UNIQUE PER DEVICE.  RENAME YAML FILE TO SA>
+                                                # **** USE DASHES (-) INSTEAD OF SPACES OR UNDERSCORE (_).  USE ONLY LOWER CASE LETTERS.     >
+  pretty_name: Thomas Closet Light Switch       # **** CHANGE FRIENDLY NAME TO SOMETHING UNIQUE PER DEVICE
+
+  device_name: "$base_node_name"
+  friendly_name: "$pretty_name"
+
+  disable_entities:  "true"     # set to "false" to have all entities show up in Home Assistant automatically
+  disable_webserver: "false"    # set to "true" to disable the webserver listening on port 80.
+
+  # made this a substitution so that the update bin file and yaml compiled versions can have different defaults
+  default_button_config: "Toggle on Press"
+
+  # GPIO definitions
+  sub_button_pin:   GPIO13
+  sub_led_pin:      GPIO04
+  sub_relay_pin:    GPIO12
+
+
+packages:
+  # SS01S package includes modules/ESP8266.yaml itself
+  sw: !include devices/treatlife-ss01s-events.yaml

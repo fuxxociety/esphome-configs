@@ -1,0 +1,63 @@
+---
+platform: gpio
+pin:
+  inverted: true
+  number: ${gpio_pin}
+name: '${friendly_name} Button'
+disabled_by_default: false
+on_multi_click:
+  - timing:
+    - ON for at most 0.5s
+    - OFF for at least 0.2s
+    then:
+      - homeassistant.event:
+          event: esphome.button
+          data:
+            device: '${friendly_name}'
+            action: single_click
+      - logger.log: "Single Click"
+      - if:
+          condition:
+            not:
+              or:
+                - api.connected:
+                - lambda: "return id(smartbulbs_latch);"
+          then:
+            - switch.toggle: switch1
+  - timing:
+    - ON for at most 0.5s
+    - OFF for at most 0.5s
+    - ON for at most 0.5s
+    - OFF for at least 0.2s
+    then:
+      - logger.log: "Double Click"
+      - homeassistant.event:
+          event: esphome.button
+          data:
+            device: '${friendly_name}'
+            action: double_click
+  - timing:
+    - ON for at most 0.5s
+    - OFF for at most 0.5s
+    - ON for at most 0.5s
+    - OFF for at least 0.5s
+    - ON for at most 0.5s
+    - OFF for at most 0.5s
+    - ON for at most 0.5s
+    - OFF for at least 0.2s
+    then:
+      - logger.log: "Single Long Clicked"
+      - homeassistant.event:
+          event: esphome.button
+          data:
+            device: '${friendly_name}'
+            action: quad_click
+  - timing:
+    - ON for at least 10s
+    then:
+      - logger.log: "Press and Hold"
+      - homeassistant.event:
+          event: esphome.button
+          data:
+            device: '${friendly_name}'
+            action: hold

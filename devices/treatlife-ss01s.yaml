@@ -1,0 +1,150 @@
+---
+substitutions:
+  device_prefix: 'switch-'
+  button_hold: 3s
+
+packages:
+  common: !include ../modules/ESP8266.yaml
+
+esphome:
+  on_boot:
+    priority: 600
+    then:
+      - if:
+          condition:
+            - lambda: 'return ${detached_mode};'
+          then:
+            - switch.turn_on: output_relay
+
+binary_sensor:
+  - <<: !include { file: treatlife/multi-click/on-multi-click.yaml, vars: { gpio_pin: GPIO13 } }
+
+text_sensor:
+  - <<: !include { file: treatlife/multi-click/text-sensor.yaml }
+
+select:
+  - platform: template
+    name: $friendly_name Relay Behavior
+    id: select_relay_mode
+    optimistic: true
+    options:
+      - "Direct Control"
+      - "Remote Control"
+      - "YAML Configured ($relay_mode)"
+    initial_option: $default_relay_mode
+    restore_value: true
+    icon: mdi:restart-alert
+    on_value:
+      - lambda: |-
+          if ( x == "Direct Control")
+            auto call = id(select_relay_mode).make_call();
+            call.set_option("false");
+            call.perform();
+          else if ( x == "Remote Control")
+            auto call = id(select_relay_mode).make_call();
+            call.set_option("false");
+            call.perform();
+          else
+            id($relay_mode);
+      - script.execute: script_save_changes
+    entity_category: config
+
+switch:
+  - platform: output
+    id: output_relay
+    output: relay1
+    name: '${friendly_name} Relay'
+    restore_mode: ${restore_profile}
+    disabled_by_default: true
+
+light:
+  - platform: status_led
+    id: errorled
+    name: ${friendly_name} Error LED
+    disabled_by_default: true
+    pin:
+      number: GPIO5
+      inverted: true
+    on_turn_on:
+      - if:
+          condition:
+            light.is_on: light1
+          then:
+            - lambda: !lambda |-
+                auto call = id(light1).make_call();
+                call.set_brightness(.01);
+                call.perform();
+    on_turn_off:
+      - if:
+          condition:
+            light.is_on: light1
+          then:
+            - lambda: !lambda |-
+                auto call = id(light1).make_call();
+                call.set_brightness(1);
+                call.perform();
+
+
+  - platform: monochromatic
+    id: light1
+    output: indicator
+    name: ${friendly_name} LightSwitch
+    restore_mode: ${restore_profile}
+    default_transition_length: '0ms'
+    on_turn_on:
+      - if:
+          condition: api.connected
+          then:
+            - homeassistant.event:
+                event: esphome.indicator
+                data:
+                  device: '${friendly_name}'
+                  action: 'on'
+          else:
+            - switch.turn_on: output_relay
+    on_turn_off:
+      - if:
+          condition: api.connected
+          then:
+            - homeassistant.event:
+                event: esphome.indicator
+                data:
+                  device: '${friendly_name}'
+                  action: 'off'
+            - if:
+                condition:
+                  - lambda: 'return !${detached_mode};'
+                then:
+                  - switch.turn_off: output_relay
+          else:
+            - switch.turn_off: output_relay
+    effects:
+      - pulse:
+          transition_length: 500ms
+          update_interval: 500ms
+      - pulse:
+          name: "Fast Pulse"
+          transition_length: 200ms
+          update_interval: 200ms
+
+output:
+  - platform: esp8266_pwm
+    id: indicator
+    pin: GPIO04
+    frequency: 90 Hz
+    min_power: 10%
+    inverted: 'true'
+  - platform: gpio
+    id: relay1
+    pin: GPIO12
+
+script:
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+
+  - id: script_do_nothing
+    then:
+      lambda: return;

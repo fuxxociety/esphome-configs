@@ -1,0 +1,13 @@
+# LightingInside A19 full-size RGBWW bulb.  packages: {device: !include templates/lightinginside/a19.yaml}
+substitutions:
+  device_description: LightingInside A19 RGBWW bulb
+  channel_red: '1'
+  channel_green: '0'
+  channel_blue: '2'
+  channel_cw: '4'
+  channel_ww: '3'
+  power_color: '9'
+  power_white: '12'
+
+packages:
+  bulb: !include sm2335-rgbww.yaml

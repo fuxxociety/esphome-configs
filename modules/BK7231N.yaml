@@ -1,0 +1,19 @@
+---
+# Beken BK7231N
+# 32-bit CPU @ 120MHz, 2MB flash, 256k RAM
+# Integrated 802.11b/g/n Wi-Fi
+# Integrated Bluetooth Low Energy (LE) system
+
+substitutions:
+  nameprefix: ''
+  namesuffix: ''
+
+bk72xx:
+  board: generic-bk7231n-qfn32-tuya
+
+esphome:
+  name: "${nameprefix}${system_name}${namesuffix}"
+  comment: "${device_description}"
+
+packages:
+  <<: !include_dir_named ./components/common

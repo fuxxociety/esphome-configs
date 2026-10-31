@@ -1,0 +1,681 @@
+# monolithic build
+# last modified: 9-6-2025
+
+
+
+# https://esphome.io/guides/configuration-types.html#substitutions
+substitutions:
+
+  device_name: office-light-switch
+  friendly_name: Office Light Switch
+
+  # https://esphome.io/components/esphome.html#esphome-creators-project
+  device_description: 'Treatlife SS01S Single-Pole Wall Switch'
+
+  time_timezone: "America/Chicago"
+  api_timeout: '35min'
+
+  web_server_username: !secret esphome_web_server_username
+  web_server_password: !secret esphome_web_server_password
+
+  disable_entities: "true"     # set to "false" to have all entities show up in Home Assistant automatically
+  disable_webserver: "false"   # set to "true" to disable webserver listening on port 80.
+
+  wifi_ssid: !secret wifi_ssid
+  wifi_password: !secret wifi_password
+  wifi_ap_timeout: 2min        # default to 2 minute timeout for yaml file as package.
+  wifi_power: '20'
+  wifi_dns_domain: !secret wifi_dns_domain
+
+  # substitutions for scripts to execute based on button actions.
+  # the built-in automations for the button will still do everything they normally do even
+  # when these substitutions are redefined.  Redefining these will not stop the ui switch from toggling.
+  # The button configuration select entity must be set to disabled to stop the button from toggling the ui switch.
+  # The button press duration sensor will also still update even with these redefined.
+  sub_on_press:                script_do_nothing # executes right when button is pressed
+  sub_on_release:              script_do_nothing # executes right when button is released
+  sub_on_double_press:         script_do_nothing # executes when the button is double pressed
+  sub_on_single_press:         script_do_nothing # executes when the button is single pressed only, not held or double pressed
+  sub_on_hold:                 script_do_nothing # executes when the button is held for a threshold amount of time
+  sub_on_release_without_hold: script_do_nothing # executes when the button is released after a press that is under the hold threshold.
+  sub_wifi_reset_script:       script_wifi_reset # reset wifi credentials, overwrite to disable
+
+  # an extra script that, if running, will stop the switch from toggling on button release.
+  sub_toggle_check: script_do_nothing
+
+  # these will execute when ui_switch turns on and off, respectively.  like on_press and on_release above, built-in
+  # automations still all run.  Lights changing can be disabled through the config light entity effects.  Relay
+  # can be disabled by selecting always on or always off in the configuration select entity.  You can control the
+  # relay independently by toggling the select entity between always on and always off.
+  sub_on_turn_on:  script_do_nothing
+  sub_on_turn_off: script_do_nothing
+
+  # allows status led to be blocked.  Currently only used on factory image to eliminate blinking during factory test.
+  sub_blink_check: script_do_nothing
+
+  # modify transition length of lights
+  sub_transition_length: 333ms
+
+  # button press substitutions
+  sub_double_press_max_gap: 333ms
+  sub_hold_time: 750ms
+  sub_button_sensor_duration: 500ms
+
+  # substitutions to control hass entities with press combos
+  hass_entity_single_press_toggle:           no.ne
+  hass_entity_double_press_toggle:           no.ne
+  hass_entity_hold_toggle:                   no.ne
+  hass_entity_release_without_hold_toggle:   no.ne
+
+  # substitutions to sync lights with hass entities instead of UI switch
+  hass_entity_control_small_light:           no.ne
+  hass_entity_control_small_light_on_state:  'on'
+  hass_entity_control_small_light_off_state: 'off'
+  hass_entity_control_big_light:             no.ne
+  hass_entity_control_big_light_on_state:    'on'
+  hass_entity_control_big_light_off_state:   'off'
+
+
+# https://esphome.io/guides/automations.html#global-variables
+globals:
+  - id: global_forced_addr
+    type: int
+    restore_value: no
+    initial_value: '12345'
+  - id: global_press_time
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+
+# https://esphome.io/components/esphome.html
+esp8266:
+  board: esp12e
+
+esphome:
+  name: $device_name
+  comment: $device_description
+
+  on_boot:
+    then:
+        # set default values for template sensors, otherwise they are unknown.
+      - binary_sensor.template.publish:
+          id: button_single_press
+          state: OFF
+      - binary_sensor.template.publish:
+          id: button_double_press
+          state: OFF
+      - binary_sensor.template.publish:
+          id: button_hold
+          state: OFF
+      - binary_sensor.template.publish:
+          id: button_release_without_hold
+          state: OFF
+
+
+# https://esphome.io/components/ota.html
+ota:
+  platform: esphome
+  id: my_ota
+  password: !secret esphome_ota_password
+  on_error:
+    then:
+      - button.press: restart_button
+
+
+# Enable Home Assistant API
+api:
+  id: esp_api
+  reboot_timeout: $api_timeout
+  encryption:
+    key: !secret api_enc_key
+
+
+wifi:
+  domain: $wifi_dns_domain
+  id: component_wifi
+  ssid: $wifi_ssid
+  password: $wifi_password
+  reboot_timeout: 10min
+  ap:
+    ssid: "$friendly_name AP"
+    password: $wifi_ap_password
+  use_address: 10.10.32.50
+
+captive_portal:
+
+
+safe_mode:
+
+
+logger:
+  id: component_logger
+  # Disabling logging over UART by default.
+  # Some devices this is needed, and in general,
+  # I really don't look at it.
+  #baud_rate: 0
+
+
+time:
+  - platform: homeassistant
+    id: time_homeassistant
+    timezone: $time_timezone
+
+
+# https://esphome.io/components/web_server.html
+#web_server:
+#  id: component_web_server
+#  port: 80
+#  local: false
+#  auth:
+#    username: "${web_server_username}"
+#    password: "${web_server_password}"
+
+
+# https://esphome.io/components/binary_sensor/index.html
+binary_sensor:
+  - platform: gpio
+    id: main_button
+    name: Main Button
+    pin:
+      number: GPIO13
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    on_multi_click:
+      # definition for single press
+    - timing:
+        - ON for at most $sub_hold_time
+        - OFF for at least $sub_double_press_max_gap
+      invalid_cooldown: 1000ms
+      then:
+        - lambda: |-
+            id(script_toggle_modes).execute();
+
+      # definition for double press
+    - timing:
+        - ON for at most $sub_hold_time
+        - OFF for at most $sub_double_press_max_gap
+        - ON for at least 1ms
+      then:
+        - lambda: |-
+            id(script_event_double_press).execute();
+
+      # definition for quad press
+    - timing:
+        - ON for at most $sub_hold_time
+        - OFF for at most $sub_double_press_max_gap
+        - ON for at most $sub_hold_time
+        - OFF for at most $sub_double_press_max_gap
+        - ON for at most $sub_hold_time
+        - OFF for at most $sub_double_press_max_gap
+        - ON for at least 1ms
+      then:
+        - lambda: |-
+            id(script_event_quad_press).execute();
+
+      # definition for holding
+    - timing:
+        - ON for at least $sub_hold_time
+      then:
+        - lambda: |-
+            id(script_event_press_and_hold).execute();
+
+      # definition for release without hold (less than 30 seconds)
+    - timing:
+        - ON for at most $sub_hold_time
+      then:
+        - lambda: |-
+            id(script_event_release_without_hold).execute();
+
+      # definition for 30s hold
+    - timing:
+        - ON for at least 30s
+      then:
+      - logger.log: "------------------->>>>>>>>>>>>>>>>>   HELD BUTTON 30 SECONDS"
+
+  - platform: template
+    name: Single Press
+    id: button_single_press
+    on_press:
+      - delay: $sub_button_sensor_duration
+      - binary_sensor.template.publish:
+          id: button_single_press
+          state: OFF
+
+  - platform: template
+    name: Double Press
+    id: button_double_press
+    on_press:
+      - delay: $sub_button_sensor_duration
+      - binary_sensor.template.publish:
+          id: button_double_press
+          state: OFF
+
+  - platform: template
+    name: Hold
+    id: button_hold
+    on_press:
+      - wait_until:
+          binary_sensor.is_off: main_button
+      - binary_sensor.template.publish:
+          id: button_hold
+          state: OFF
+
+  - platform: template
+    name: Release Without Hold
+    id: button_release_without_hold
+    on_press:
+      - delay: $sub_button_sensor_duration
+      - binary_sensor.template.publish:
+          id: button_release_without_hold
+          state: OFF
+
+  - platform: template
+    name: 4MiB
+    id: sensor_4m
+    disabled_by_default: $disable_entities
+
+
+    # https://esphome.io/components/switch/template.html
+switch:
+
+  - platform: template
+    name: UI Switch
+    id: ui_switch
+    restore_mode: RESTORE_DEFAULT_OFF
+    internal: false
+    optimistic: true
+
+    on_turn_on:
+      then:
+        - logger.log: "Switch turned on - attempting to turn on remap_light"
+        - lambda: |-
+            id(remap_light).turn_on();
+            // (indicator) switch is on, copy on values
+            auto call = id(white_led).make_call();
+            call.set_state(true);
+            call.set_brightness(1.0);
+            call.perform();
+        - script.execute: script_event_switch_on
+        - script.execute: script_save_changes
+
+    on_turn_off:
+      then:
+        - lambda: |-
+            id(remap_light).turn_off();
+        - script.execute: script_event_switch_off
+        - script.execute: script_save_changes
+
+  - platform: template
+    id: switch_no_hass
+    name: No HASS
+    optimistic: true
+    entity_category: config
+    disabled_by_default: $disable_entities
+    icon: mdi:toggle-switch-off-outline
+    restore_mode: RESTORE_DEFAULT_ON
+
+    on_turn_on:
+      - lambda: |-
+          id(esp_api)->set_reboot_timeout(0);  // 0 disables auto rebooting and also new status led blinking.  doesn't stop current status led blinking
+          id(esp_api)->status_clear_warning(); // stops current status led blinking, timeout 0 keeps it from restarting
+      - script.execute: script_save_changes
+
+    on_turn_off:
+      - lambda: id(esp_api)->set_reboot_timeout(900000);
+      - script.execute: script_save_changes
+
+
+# PWM outputs for each LED channel
+# https://esphome.io/components/output/esp8266_pwm.html
+output:
+
+    # relay output
+  - platform: gpio
+    id: relay
+    pin: GPIO12
+
+    # red light pwm
+  - platform: esp8266_pwm
+    pin: GPIO5
+    frequency: 250 Hz
+    id: pwm1_red
+    inverted: true
+
+    # white light pwm
+  - platform: esp8266_pwm
+    pin: GPIO4
+    frequency: 250 Hz
+    id: pwm2_white
+    min_power: 10%
+    inverted: true
+
+
+# https://esphome.io/components/light/index.html
+light:
+
+  - platform: binary
+    name: Switch
+    id: remap_light
+    output: relay
+
+  - platform: monochromatic
+    name: Error LED
+    id: red_led
+    output: pwm1_red
+    default_transition_length: 333ms
+    disabled_by_default: true
+
+  - platform: monochromatic
+    name: Status LED
+    id: white_led
+    output: pwm2_white
+    default_transition_length: 333ms
+    disabled_by_default: true
+
+
+# https://esphome.io/components/select/index.html
+# https://esphome.io/components/select/template.html
+select:
+
+  - platform: template
+    name: Relay Config
+    id: select_relay
+    optimistic: true
+    options:
+      - Switched
+      - Always On
+      - Always Off
+    initial_option: Switched
+    restore_value: true
+    entity_category: config
+    icon: mdi:progress-question
+
+    on_value:
+      then:
+        - lambda: |-
+            if      ( x == "Always On"  )   { id(relay).turn_on();  }
+            else if ( x == "Always Off" )   { id(relay).turn_off(); }
+            else if ( id(ui_switch).state ) { id(relay).turn_on();  }
+            else      /* ui_switch off */   { id(relay).turn_off(); }
+        - script.execute: script_save_changes
+
+  - platform: template
+    name: Brightness
+    id: select_brightness
+    optimistic: true
+    options:
+      - "off"
+      - "bright"
+      - "medium"
+      - "low"
+      - "night"
+    initial_option: "off"
+    restore_value: false
+    icon: mdi:restart-alert
+
+    on_value:
+      - script.execute: reset_delay
+      - script.execute: script_event_single_press
+    entity_category: config
+
+  - platform: template
+    name: Button Config
+    id: select_button
+    optimistic: true
+    options:
+      - Toggle on Press
+      - Disabled
+      - Toggle on Release
+      - Toggle on Single Press
+      - Toggle on Double Press
+      - Toggle on Hold
+      - Toggle on Release Without Hold
+    initial_option: Toggle on Press
+    restore_value: true
+    entity_category: config
+    icon: mdi:toggle-switch-off-outline
+
+    on_value:
+      - script.execute: script_save_changes
+
+
+# https://esphome.io/guides/automations.html#script-component
+script:
+
+  - id: script_toggle_modes
+    then:
+      - lambda: |-
+          if ( id(select_relay).state == "Always On" ) {  /* select_relay = "Always On" */
+            auto call = id(select_brightness).make_call();
+            if ( !id(reset_delay).is_running() ) {        /* if delay is expired */
+              if ( id(ui_switch).state ) {                /* if ui_switch is on? */
+                call.select_first();                      /* turn bulbs off */
+                id(reset_delay).execute();                /* start timer for next action */
+              } else {                                    /* if ui_switch is off? */
+                call.set_option("bright");                /* max bright white */
+              }
+            } else {                                      /* if delay script _IS_ running */
+              call.select_next(true);                     /* pick next select option */
+              id(reset_delay).execute();                  /* restart delay */
+            }
+            call.perform();                               /* apply the action */
+            if ( id(select_brightness).state == "off" ) { /* Handle ui_switch state in Always-On mode */
+              id(ui_switch).turn_off();
+            } else {
+              id(ui_switch).turn_on();
+            }
+          } else {                                        /* select_relay = "Always Off" or "Switched" */
+            auto call = id(select_brightness).make_call();
+            if ( id(ui_switch).state ) {
+              call.select_first();
+              id(ui_switch).turn_off();
+            } else {
+              call.set_option("bright");
+              id(ui_switch).turn_on();
+            }
+            call.perform();
+          }
+
+  - id: script_event_switch_on
+    then:
+      - homeassistant.event:
+          event: esphome.switch
+          data:
+            devicename: $device_name
+            name_friendly: $friendly_name
+            action: switch_on
+            mode: !lambda return id(select_relay).state;
+
+  - id: script_event_switch_off
+    then:
+      - homeassistant.event:
+          event: esphome.switch
+          data:
+            devicename: $device_name
+            name_friendly: $friendly_name
+            action: switch_off
+            mode: !lambda return id(select_relay).state;
+
+  - id: script_event_single_press
+    then:
+      - homeassistant.event:
+          event: esphome.single
+          data:
+            devicename: $device_name
+            name_friendly: $friendly_name
+            action: single_press
+            mode: !lambda return id(select_relay).state;
+            brightness: !lambda return id(select_brightness).state;
+      - script.execute: reset_delay
+
+  - id: script_event_double_press
+    then:
+      homeassistant.event:
+        event: esphome.double
+        data:
+          devicename: $device_name
+          name_friendly: $friendly_name
+          action: double_press
+
+  - id: script_event_quad_press
+    then:
+      - lambda: |-
+          // Change switch mode to Smart-Bulbs style
+          if ( id(select_relay).has_state() ) {
+            auto call = id(select_relay).make_call();
+            if ( id(select_relay).state != "Switched" ) {
+              call.set_option("Switched");
+            }
+            else if ( id(select_relay).state != "Always On" ) {
+              call.set_option("Always On");
+            }
+            call.perform();
+          }
+      - homeassistant.event:
+          event: esphome.quad
+          data:
+            devicename: $device_name
+            name_friendly: $friendly_name
+            action: quad_press
+
+  - id: script_event_press_and_hold
+    then:
+      homeassistant.event:
+        event: esphome.hold
+        data:
+          devicename: $device_name
+          name_friendly: $friendly_name
+          action: hold
+
+  - id: script_event_release_without_hold
+    then:
+      homeassistant.event:
+        event: esphome.release_without_hold
+        data:
+          devicename: $device_name
+          name_friendly: $friendly_name
+          action: release_without_hold
+
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+
+  - id: reset_delay
+    mode: restart
+    then:
+      - delay: 8s
+      - logger.log: "select_brightness has expired!"
+
+
+# https://esphome.io/components/button/index.html
+button:
+
+  - platform: restart
+    id: restart_button
+    name: Restart Firmware
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+
+    # https://esphome.io/components/button/template.html
+  - platform: template
+    id: test1
+    name: Single Click
+    disabled_by_default: true
+
+    on_press:
+      then:
+        - lambda: |-
+            id(script_toggle_modes).execute();
+
+  - platform: template
+    id: test2
+    name: Quad Click
+    disabled_by_default: true
+
+    on_press:
+      then:
+        - lambda: |-
+            id(script_event_quad_press).execute();
+
+
+
+# Send IP Address to HA
+# https://esphome.io/components/text_sensor/wifi_info.html
+text_sensor:
+
+  - platform: wifi_info
+    ip_address:
+      name: IP Address
+      disabled_by_default: $disable_entities
+    ssid:
+      name: Connected SSID
+      disabled_by_default: $disable_entities
+    bssid:
+      name: Connected BSSID
+      disabled_by_default: $disable_entities
+    mac_address:
+      name: Connected MAC
+      disabled_by_default: $disable_entities
+
+
+# https://esphome.io/components/sensor/index.html
+sensor:
+
+  - platform: template
+    id: sensor_wifi_signal_percentage
+    name: WiFi Signal Percentage
+    icon: "mdi:wifi"
+    unit_of_measurement: "%"
+    disabled_by_default: $disable_entities
+    update_interval: never
+    lambda: |-
+      if (id(sensor_wifi_signal).state) {
+        if (id(sensor_wifi_signal).state <= -100 ) {
+          return 0;
+        } else if (id(sensor_wifi_signal).state >= -50) {
+          return 100;
+        } else {
+          return 2 * (id(sensor_wifi_signal).state + 100);
+        }
+      } else {
+        return NAN;
+      }
+
+  - platform: wifi_signal
+    id: sensor_wifi_signal
+    name: WiFi Signal
+    update_interval: 300s
+    disabled_by_default: $disable_entities
+    on_value:
+      - component.update: sensor_wifi_signal_percentage
+
+    # https://esphome.io/components/sensor/template.html
+  - platform: template
+    name: Button Press Duration
+    id: sensor_press_duration
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+    unit_of_measurement: ms
+    icon: mdi:timer-outline
+
+
+# emulate status_led
+# https://esphome.io/guides/automations.html#interval-component
+#interval:
+#  - interval: 5s
+#    then:
+#      if:
+#        condition:
+#          - lambda: return ( ( (App.get_app_state() & STATUS_LED_ERROR) != 0u) || ((App.get_app_state() & STATUS_LED_WARNING) != 0u) );
+#        then:
+#          - if:
+#              condition:
+#                not:
+#                  - script.is_running: blink_status_led
+#              then:
+#                - script.execute: blink_status_led

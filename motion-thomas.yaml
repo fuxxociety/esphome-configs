@@ -1,0 +1,33 @@
+# ##################################
+# Loginovo Ceiling-Mounted MMWave Presence Sensor
+# ##################################
+---
+substitutions:
+  system_name: "thomas"           # **** CHANGE DEVICE NAME TO SOMETHING UNIQUE PER DEVICE.  RENAME YAML FILE TO SAME NAME.   ****
+                                     # **** USE DASHES (-) INSTEAD OF SPACES OR UNDERSCORE (_).  USE ONLY LOWER CASE LETTERS.    ****
+  friendly_name: "Motion-Thomas"  # **** CHANGE FRIENDLY NAME TO SOMETHING UNIQUE PER DEVICE                                  ****
+
+  disable_entities:  "true"          # set to "false" to have all entities show up in Home Assistant automatically
+  disable_webserver: "true"          # set to "true" to disable the webserver listening on port 80.
+
+esphome:
+  name_add_mac_suffix: false
+  project:
+    name: esphome.motionsensor
+    version: "1.0"
+
+dashboard_import:
+  package_import_url: github://esphome/bluetooth-proxies/esp32-generic/esp32-generic-c3.yaml@main
+
+esp32_ble_tracker:
+  scan_parameters:
+    # We currently use the defaults to ensure Bluetooth
+    # can co-exist with WiFi In the future we may be able to
+    # enable the built-in coexistence logic in ESP-IDF
+    active: true
+
+bluetooth_proxy:
+  active: true
+
+packages:
+  sw: !include devices/loginovo-ESP32C3-ZY-M100-mmwave-presence.yaml

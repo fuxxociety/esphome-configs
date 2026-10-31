@@ -1,0 +1,63 @@
+# Diagnostic entities every device has. Names are short: HA prefixes the device's friendly_name
+# (Kitchen → sensor.kitchen_wifi_signal).
+button:
+  - platform: restart
+    id: restart_button
+    name: Restart
+    entity_category: diagnostic
+    disabled_by_default: ${disable_entities}
+
+binary_sensor:
+  - platform: status
+    id: api_status
+    name: API Status
+    disabled_by_default: ${disable_entities}
+
+sensor:
+  - platform: uptime
+    id: sensor_uptime
+    name: Uptime
+    type: timestamp
+    entity_category: diagnostic
+
+  - platform: wifi_signal
+    id: sensor_wifi_signal
+    name: WiFi Signal
+    update_interval: 300s
+    disabled_by_default: ${disable_entities}
+    on_value:
+      - component.update: sensor_wifi_signal_percentage
+
+  - platform: template
+    id: sensor_wifi_signal_percentage
+    name: WiFi Signal Percentage
+    icon: mdi:wifi
+    unit_of_measurement: '%'
+    entity_category: diagnostic
+    disabled_by_default: ${disable_entities}
+    update_interval: never
+    lambda: |-
+      float rssi = id(sensor_wifi_signal).state;
+      if (std::isnan(rssi)) return NAN;
+      return std::clamp(2.0f * (rssi + 100.0f), 0.0f, 100.0f);
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: IP Address
+      disabled_by_default: ${disable_entities}
+    ssid:
+      name: Connected SSID
+      disabled_by_default: ${disable_entities}
+    bssid:
+      name: Connected BSSID
+      disabled_by_default: ${disable_entities}
+    mac_address:
+      name: Connected MAC
+      disabled_by_default: ${disable_entities}
+
+  - platform: version
+    name: Firmware Version
+    hide_timestamp: true
+    entity_category: diagnostic
+    disabled_by_default: ${disable_entities}

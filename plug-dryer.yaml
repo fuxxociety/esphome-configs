@@ -1,0 +1,7 @@
+substitutions:
+  name: plug-dryer
+  friendly_name: Dryer
+  room_key: dryer
+
+packages:
+  device: !include templates/minoston/mp22wp.yaml

@@ -1,0 +1,91 @@
+---
+# These scripts will only perform actions if substitutions are changed.
+substitutions:
+
+  # substitutions to control hass entities with press combos
+  hass_entity_single_press_toggle:            no.ne
+  hass_entity_double_press_toggle:            no.ne
+  hass_entity_short_hold_toggle:              no.ne
+  hass_entity_release_without_hold_toggle:    no.ne
+  hass_entity_long_hold_toggle:               no.ne
+  hass_entity_3s_hold_toggle:                 no.ne
+  hass_entity_10s_hold_toggle:                no.ne
+
+
+script:
+
+  - id: script_do_nothing
+    then:
+      - lambda: return;
+
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+
+  - id: script_hass_toggle_single_press
+    then:
+      - if:
+          condition:    # toggle if single press hass entity is set
+            lambda: return (strcmp("$hass_entity_single_press_toggle","no.ne") != 0 );
+          then:
+            homeassistant.service:
+              service: homeassistant.toggle
+              data:
+                entity_id: $hass_entity_single_press_toggle
+
+  - id: script_hass_toggle_double_press
+    then:
+      - if:
+          condition:    # toggle if double press hass entity is set
+            lambda: return (strcmp("$hass_entity_double_press_toggle","no.ne") != 0 );
+          then:
+            homeassistant.service:
+              service: homeassistant.toggle
+              data:
+                entity_id: $hass_entity_double_press_toggle
+
+  - id: script_hass_toggle_short_hold
+    then:
+      - if:
+          condition:    # toggle if hold hass entity is set
+            lambda: return (strcmp("$hass_entity_short_hold_toggle","no.ne") != 0 );
+          then:
+            homeassistant.service:
+              service: homeassistant.toggle
+              data:
+                entity_id: $hass_entity_short_hold_toggle
+
+  - id: script_hass_toggle_release_without_hold
+    then:
+      - if:
+          condition:    # toggle if release without hold hass entity is set
+            lambda: return (strcmp("$hass_entity_release_without_hold_toggle","no.ne") != 0 );
+          then:
+            homeassistant.service:
+              service: homeassistant.toggle
+              data:
+                entity_id: $hass_entity_release_without_hold_toggle
+
+  - id: script_hass_toggle_3s_hold
+    then:
+      - if:
+          condition:    # toggle if release without hold hass entity is set
+            lambda: return (strcmp("$hass_entity_3s_hold_toggle","no.ne") != 0 );
+          then:
+            homeassistant.service:
+              service: homeassistant.toggle
+              data:
+                entity_id: $hass_entity_3s_hold_toggle
+
+  - id: script_hass_toggle_10s_hold
+    then:
+      - if:
+          condition:    # toggle if long hold hass entity is set
+            lambda: return (strcmp("$hass_entity_long_hold_toggle","no.ne") != 0 );
+          then:
+            homeassistant.service:
+              service: homeassistant.toggle
+              data:
+                entity_id: $hass_entity_long_hold_toggle

@@ -1,0 +1,16 @@
+---
+# definition for 3s hold to change switch mode
+timing:
+  - ON for at least $sub_3s_hold_time
+then:
+  - logger.log: "Detected 3s Hold"
+  - lambda: |-
+      id(script_hass_toggle_3s_hold).execute();
+      id($sub_on_3s_hold).execute();
+  - while:
+      condition:
+        binary_sensor.is_on: main_button  # Verify button still held
+      then:
+        - script.execute: blink_status_led
+        - script.wait: blink_status_led
+

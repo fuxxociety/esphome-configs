@@ -1,0 +1,39 @@
+# Load for common/switch/core.yaml: an APPLIANCE on the relay (Minoston plugs: dishwasher, dryer, washer).
+# Entity: a switch (name = device name), as before: switch.dryer. A single press toggles it (Switched).
+substitutions:
+  load_restore_mode: RESTORE_DEFAULT_ON   # what the plugs ran (sub_restore_mode)
+
+switch:
+  - platform: template
+    id: main_switch
+    name: None
+    optimistic: true
+    restore_mode: ${load_restore_mode}
+    on_turn_on:
+      - lambda: id(load_on) = true;
+      - script.execute: relay_apply
+      - script.execute: copy_vals
+      - script.execute: event_switch_on
+    on_turn_off:
+      - lambda: id(load_on) = false;
+      - script.execute: relay_apply
+      - script.execute: copy_vals
+      - script.execute: event_switch_off
+
+script:
+  - id: load_force_off
+    then:
+      - switch.turn_off: main_switch
+
+  - id: gesture_single
+    then:
+      - lambda: |-
+          const bool smart = !id(ha_fallback) && id(relay_config).current_option() == "Always On";
+          if (!smart) {
+            if (id(relay_on)) id(main_switch).turn_off(); else id(main_switch).turn_on();
+          } else if (!id(relay_on)) {
+            id(main_switch).turn_on();             // Always On with the relay open: a press is what energises it
+          }
+          id(ev_mode) = smart ? "Always On" : "Switched";
+          id(ev_brightness) = id(main_switch).state ? "bright" : "off";
+      - script.execute: event_single

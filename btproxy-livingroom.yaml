@@ -1,0 +1,51 @@
+###################################
+# Basic ESP32-WROOM32 module
+###################################
+---
+substitutions:
+  system_name: btproxy-livingroom
+  friendly_name: Livingroom Bluetooth Proxy
+  device_description: "Livingroom Bluetooth Proxy"
+
+  disable_entities:  "true"     # set to "false" to have all entities show up in Home Assistant automatically
+  
+  # The Web Server Component component should be disabled as the device is likely to run out of memory and will malfunction when both components are enabled simultaneously.
+  disable_webserver: "true"
+
+  logger_baud: "115200"
+
+packages:
+  esp: !include ./modules/ESP32.yaml
+
+esphome:
+  name: ${system_name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: false
+  project:
+    name: esphome.bluetooth-proxy
+    version: "1.0"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+improv_serial:
+
+dashboard_import:
+  package_import_url: github://esphome/bluetooth-proxies/esp32-generic/esp32-generic.yaml@main
+
+esp32_ble_tracker:
+  scan_parameters:
+    # We currently use the defaults to ensure Bluetooth
+    # can co-exist with WiFi In the future we may be able to
+    # enable the built-in coexistence logic in ESP-IDF
+    active: true
+
+bluetooth_proxy:
+  active: true
+
+button:
+  - platform: safe_mode
+    name: Safe Mode Boot
+    entity_category: diagnostic

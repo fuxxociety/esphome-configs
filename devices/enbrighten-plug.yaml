@@ -1,0 +1,518 @@
+# https://esphome.io/guides/configuration-types.html#substitutions
+substitutions:
+
+  # substitutions can be changed here if you are using this file directly in the ESPHome dashboard.  The better approach is
+  # to incorporate this file as a package using the following packages: configuration, and then overwrite these substitutions
+  # in your local yaml file by redefining them.
+  #
+  # packages:
+  #   kauf.plf12: github://KaufHA/PLF12/kauf-plug.yaml
+
+  nameprefix: "plug-"
+
+  # https://esphome.io/components/esphome.html#esphome-creators-project
+  project_name: Enbrighten.Plug
+  project_ver_num: ""
+  project_ver_let: y
+
+  # https://esphome.io/components/switch/gpio.html?highlight=restore_mode
+  sub_restore_mode: RESTORE_DEFAULT_ON  # overwrite to change boot up behavior of relay
+
+  disable_entities:  "true"     # set to "false" to have all entities show up in Home Assistant automatically
+  disable_webserver: "false"    # set to "true" to disable the webserver listening on port 80.
+
+  # substitutions for button actions.  on_press and on_release implement a timer scheme with configurable delay.
+  # on_hold_30s re-enables the AP and captive portal for the precompiled update binary.
+  # any length of hold can be implemented with just on_press and on_release using the following directions.  This
+  # is basically how this yaml file works.
+  #   * have a delay for the desired hold in the on_press script
+  #   * stop the on_press script in the on_release script
+  #   * place actions in the on_press script after the delay to perform them while still holding the button
+  #   * place actions in the on_release script, with the condition that the on_press script is not running, to
+  #     perform them on release of the button.
+  sub_on_press:         script_do_nothing  # executes right when button is initially pressed
+  sub_on_release:       script_do_nothing  # executes right when button is released
+  sub_on_hold_30s:      script_force_ap    # executes right when button has been held for 5s, while button is still being held
+
+  sub_on_turn_on:       script_do_nothing
+  sub_on_turn_off:      script_do_nothing
+
+  # an extra script that, if running, will stop the relay from toggling on button release.
+  # used to not toggle when WiFi AP is re-enaled on update bin file.
+  sub_toggle_check: script_force_ap
+
+  # made this a substitution so that the update bin file and yaml compiled versions can have different defaults
+  default_button_config: "Toggle on Press"
+
+  # set default power monitoring update interval in yaml.
+  # this will only be effective as long as the select entity is set to "YAML Configured"
+  sub_update_interval: 10s
+  sub_pm_initial_option: YAML Configured ($sub_update_interval)
+  sub_hlw_timeout: 3s
+
+  # GPIO definitions
+  sub_button_pin:   P26
+  sub_led_pin:      P7
+  sub_relay_pin:    P24
+
+  # debounce specifications
+  sub_default_debounce: "100"
+  sub_min_debounce:     "50"
+
+
+#packages:
+#  common: !inclboard:ude modules/BK7231T.yaml
+bk72xx:
+  board: generic-bk7231n-qfn32-tuya
+
+
+# https://esphome.io/guides/automations.html#global-variables
+globals:
+  - id: global_press_time
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: global_has_debounce
+    type: boolean
+    restore_value: no
+    initial_value: "false"
+
+# https://esphome.io/components/esphome.html#adjusting-flash-writes
+preferences:
+  # setting interval to 5 minutes since this defines writing total daily energy to flash, which will occur
+  # every interval length 24/7/365.  Created a specific save script that is executed for things that need
+  # to save more quickly.
+  flash_write_interval: 5min
+
+
+# https://esphome.io/components/esphome.html
+esphome:
+  name: ${nameprefix}${name}
+
+  project:
+    name: $project_name
+    version: $project_ver_num($project_ver_let)
+
+  on_boot:
+    then:
+        # implementing on_boot automation as a script makes it run in parallel
+        # with any other on_boot scripts.
+      - script.execute: script_set_power_leds
+      - script.execute: on_wifi_connect
+
+
+# https://esphome.io/components/external_components.html
+# testing, utilizing smart outlet with BK8271T
+external_components:
+  - source:
+      type: git
+      url: https://github.com/KaufHA/common
+      ref: v2026.10.4
+    refresh: 0s
+#    components: [ wifi, gpio, switch, web_server ]
+
+#  - source:
+#      type: git
+#      url: https://github.com/fuxxociety/kauf-common
+#    components: [ web_server ]
+#    refresh: 0s
+
+
+# https://esphome.io/components/wifi.html
+wifi:
+
+  # **** ENTER WI-FI CREDENTIALS HERE, USING SECRETS.YAML RECOMMENDED ****
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # enable wifi ap with ridiculous timeout so it does not normally turn on.
+  ap:
+    ap_timeout: 2147483647ms  # maximum 32 bit value.  About 3.5 weeks in milliseconds.
+
+
+# https://esphome.io/components/captive_portal.html
+#captive_portal:
+
+
+# https://esphome.io/components/logger.html
+logger:
+
+# https://esphome.io/components/api.html
+api:
+  id: kauf_api
+
+
+# https://esphome.io/components/ota.html
+ota:
+  - platform: esphome
+    password: !secret esphome_ota_password
+    on_error:
+      - button.press: restart_button
+
+safe_mode:
+
+# https://esphome.io/components/web_server.html
+#web_server:
+#  disable: $disable_webserver
+#  js_url: https://kaufha.com/v2/www.js
+
+# https://esphome.io/components/binary_sensor/index.html
+binary_sensor:
+  # button input toggles relay and thereby power led
+  # https://esphome.io/components/binary_sensor/gpio.html
+  - platform: gpio
+    id: button_in
+    name: $friendly_name Button
+    pin:
+      number: $sub_button_pin
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    on_press:
+      - lambda: |-
+          // store time of press and clear duration sensor
+          id(global_press_time) = esphome::millis();
+          id(sensor_press_duration).publish_state(0);
+
+          // toggle if configured for toggle on press
+          if (id(select_button).state == "Toggle on Press") {
+            id(relay).toggle(); }
+      - script.execute: $sub_on_press
+      - script.execute: script_30s_timer
+    on_release:
+      - lambda: |-
+          // set duration sensor
+          id(sensor_press_duration).publish_state(esphome::millis() - id(global_press_time) + id(number_debounce).state);
+
+          // toggle if configured on release and toggle check script is not running.
+          if (  (id(select_button).state == "Toggle on Release") && !id($sub_toggle_check).is_running() ) {
+            id(relay).toggle();
+          }
+      - script.execute: $sub_on_release
+      - script.stop: script_30s_timer
+    filters:
+      - delayed_on: !lambda return id(number_debounce).state;
+
+
+# https://esphome.io/guides/automations.html#script-component
+script:
+
+    # sets LEDs to proper state based on LED configuration and relay state
+  - id: script_set_power_leds
+    then:
+      - lambda: |-
+          // if led follows power status
+          if ( (id(select_led).state == "Power Status") || (id(select_led).state == "Error and Power") ) {
+            id(led).publish_state(id(relay).state); }
+          // if led follows inverse of power status
+          else if ( (id(select_led).state == "Invert Power Status") || (id(select_led).state == "Error and Invert Power") ) {
+            id(led).publish_state(!id(relay).state); }
+      - script.execute: script_save_changes
+
+  - id: blink_status_led
+    mode: queued
+    then:
+      - lambda: |-
+          // turn on led if configured for error status
+          if ( (id(select_led).state == "Error Status")  ||
+               (id(select_led).state == "Error and Power") ||
+               (id(select_led).state == "Error and Invert Power") ) {
+            id(led).turn_on(); }
+      - delay: 350ms
+
+      - lambda: |-
+          // turn off led if configured for error status
+          if ( (id(select_led).state == "Error Status")  ||
+               (id(select_led).state == "Error and Power") ||
+               (id(select_led).state == "Error and Invert Power") ) {
+            id(led).turn_off(); }
+      - delay: 1150ms
+
+      - if:
+          condition:
+            - lambda: return ( ( (App.get_app_state() & STATUS_LED_ERROR) != 0u) || ((App.get_app_state() & STATUS_LED_WARNING) != 0u) );
+          then:
+            - script.execute: blink_status_led      # repeat as long as error/warning exists
+          else:
+            - script.execute: script_set_power_leds # done with status LED, restore light power status
+
+  - id: script_setting_reboot
+    mode: restart          # only reboot plug settings are static for 10s.  Another change restarts timer.
+    then:
+      - lambda: ESP_LOGCONFIG("kauf-plug.yaml","Setting change requiring reboot detected, rebooting in 10 seconds to effect change.");
+      - delay: 10s
+      - button.press: restart_button
+
+  - id: script_30s_timer
+    then:
+      - delay: !lambda return (30000-id(number_debounce).state);
+      - script.execute: $sub_on_hold_30s
+
+  - id: on_wifi_connect
+    then:
+        # wait until wifi connects
+      - wait_until: wifi.connected
+      - lambda: |-
+          ESP_LOGD("KAUF on_boot","------------------->>>>>>>>>>>>>>>>>   wifi connected, cranking ap timeout back up");
+          wifi_wificomponent_id->set_ap_timeout(2147483647);
+
+  - id: script_force_ap
+    then:
+      - logger.log: "------------------->>>>>>>>>>>>>>>>>   HELD BUTTON 30 SECONDS, FORCING AP"
+
+      # overwrite software defined credentials to force ap to turn on.
+      - lambda: wifi::global_wifi_component->save_wifi_sta("initial_ap","asdfasdfasdfasdf");
+
+      # blink LED for 10s then restart to get captive portal to turn on.
+      - script.execute: blink_led
+      - delay: 10s
+      - button.press: restart_button
+
+    # blink LED forever. Used when button is held to re-enable AP. Stops blinking because plug restarts.
+  - id: blink_led
+    mode: queued
+    then:
+      - switch.toggle: led
+      - delay: 333ms
+      - script.execute: blink_led
+
+  - id: script_do_nothing
+    then:
+      - lambda: return;
+
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+
+
+# pwm outputs for LED so it can be dimmed
+# https://esphome.io/components/output/libretiny_pwm.html
+output:
+  - platform: libretiny_pwm
+    id: led_pwm
+    frequency: 200 Hz
+    pin: $sub_led_pin
+    inverted: true
+
+# https://esphome.io/components/switch/index.html
+switch:
+  # relay output
+  # https://esphome.io/components/switch/gpio.html
+  - platform: gpio
+    id: relay
+    name: $friendly_name
+    pin: $sub_relay_pin
+    entity_category: ''
+    restore_mode: $sub_restore_mode
+    on_turn_on:
+        - script.execute: script_set_power_leds
+        - script.execute: $sub_on_turn_on
+    on_turn_off:
+        - script.execute: script_set_power_leds
+        - script.execute: $sub_on_turn_off
+
+    # https://esphome.io/components/switch/template.html
+  - platform: template
+    id: switch_no_hass
+    name: $friendly_name No HASS
+    optimistic: true
+    entity_category: config
+    disabled_by_default: $disable_entities
+    icon: mdi:toggle-switch-off-outline
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_on:
+      - lambda: |-
+          id(kauf_api).set_reboot_timeout(0);  // 0 disables auto rebooting and also new status led blinking.  doesn't stop current status led blinking
+          id(kauf_api).status_clear_warning(); // stops current status led blinking, timeout 0 keeps it from restarting
+      - script.execute: script_save_changes
+    on_turn_off:
+      - lambda: id(kauf_api).set_reboot_timeout(900000);
+      - script.execute: script_save_changes
+
+  - platform: template
+    id: led
+    name: $friendly_name LED
+    optimistic: true
+    entity_category: config
+    disabled_by_default: $disable_entities
+    icon: mdi:led-outline
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: id(led_pwm).set_level(id(led_brightness).state/100);
+    on_turn_off:
+      - lambda: id(led_pwm).set_level(0.0);
+
+
+# https://esphome.io/components/button/index.html
+# https://esphome.io/components/button/restart.html
+button:
+  - platform: restart
+    id: restart_button
+    name: $friendly_name Restart Firmware
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+
+
+# clock input from Home Assistant used to calculate total daily energy
+# https://esphome.io/components/time.html#home-assistant-time-source
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+
+# https://esphome.io/components/sensor/index.html
+sensor:
+  # https://esphome.io/components/sensor/uptime.html
+#  - platform: uptime
+#    name: $friendly_name Uptime
+#    update_interval: 60s
+#    entity_category: diagnostic
+#    disabled_by_default: $disable_entities
+
+   # https://esphome.io/components/sensor/template.html
+  - platform: template
+    name: $friendly_name Button Press Duration
+    id: sensor_press_duration
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+    unit_of_measurement: ms
+    icon: mdi:timer-outline
+
+
+# https://esphome.io/components/number/index.html
+# https://esphome.io/components/number/template.html
+number:
+
+  - platform: template
+    name: $friendly_name led Brightness
+    min_value: 1
+    max_value: 100
+    step: 1
+    initial_value: 75
+    id: led_brightness
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "%"
+    mode: slider
+    icon: mdi:brightness-percent
+    set_action:
+      - script.execute: script_save_changes
+    on_value:
+      - lambda: if ( id(led).state ) id(led_pwm).set_level(x/100);
+
+  - platform: template
+    name: $friendly_name Debounce Time
+    min_value: $sub_min_debounce
+    max_value: 2000
+    step: 1
+    initial_value: $sub_default_debounce
+    id: number_debounce
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "ms"
+    mode: box
+    disabled_by_default: $disable_entities
+
+
+# https://esphome.io/components/select/index.html
+# https://esphome.io/components/select/template.html
+select:
+
+  - platform: template
+    name: $friendly_name Button Config
+    id: select_button
+    optimistic: true
+    options:
+      - Toggle on Press
+      - Toggle on Release
+      - Don't Toggle
+    initial_option: $default_button_config
+    restore_value: true
+    icon: mdi:circle-double
+    entity_category: config
+    set_action:
+      - script.execute: script_save_changes
+
+  - platform: template
+    name: $friendly_name led config
+    id: select_led
+    optimistic: true
+    entity_category: config
+    options:
+      - Power Status
+      - No Automation
+      - Invert Power Status
+      - Error Status
+      - Error and Power
+      - Error and Invert Power
+    initial_option: Power Status
+    restore_value: true
+    icon: mdi:led-on
+    set_action:
+      - script.execute: script_save_changes
+    on_value:
+      - if:
+          condition:
+            - lambda: return ( x == "Error Status" );
+          then:
+            - switch.turn_off: led
+      - script.execute: script_set_power_leds
+
+  - platform: template
+    name: $friendly_name Boot State
+    id: select_boot_state
+    optimistic: true
+    options:
+      - "Restore Power Off State"
+      - "Invert Power Off State"
+      - "Always On"
+      - "Always Off"
+      - "YAML Configured ($sub_restore_mode)"
+    initial_option: "Restore Power Off State"
+    restore_value: true
+    icon: mdi:restart-alert
+    entity_category: config
+    on_value:
+      - lambda: |-
+          if ( x == "Restore Power Off State")
+            relay->set_restore_mode(SWITCH_RESTORE_DEFAULT_OFF);
+          else if ( x == "Invert Power Off State")
+            relay->set_restore_mode(SWITCH_RESTORE_INVERTED_DEFAULT_OFF);
+          else if ( x == "Always On")
+            relay->set_restore_mode(SWITCH_ALWAYS_ON);
+          else if ( x == "Always Off")
+            relay->set_restore_mode(SWITCH_ALWAYS_OFF);
+          else
+            relay->set_restore_mode(SWITCH_$sub_restore_mode);
+
+          // republish state so it gets saved if necessary
+          // but make sure relay already set up, don't want to publish here on boot
+          if ( id(relay).is_setup() ) id(relay).publish_state(id(relay).state, true);
+      - script.execute: script_save_changes
+
+
+# Send IP Address to HA
+# https://esphome.io/components/text_sensor/wifi_info.html
+text_sensor:
+
+  - platform: wifi_info
+    ip_address:
+      name: $friendly_name IP Address
+      disabled_by_default: $disable_entities
+
+
+# emulate status_led
+# https://esphome.io/guides/automations.html#interval-component
+interval:
+  - interval: 5s
+    then:
+    - lambda: |-
+        if ( ( ((App.get_app_state() & STATUS_LED_ERROR  ) != 0u) ||
+               ((App.get_app_state() & STATUS_LED_WARNING) != 0u) )
+            && !id(blink_status_led).is_running() )
+          id(blink_status_led).execute();

@@ -1,0 +1,28 @@
+globals:
+  - id latch${number}
+    type: bool
+    restore_value: no
+    initial_value: "false"
+
+switch:
+  - name: "${friendly_name} Smart Bulbs"
+    platform: template
+    id: smart_ctl
+    device_class: "switch"
+    entity_category: "config"
+    lambda: |-
+      if (id(latch${number})) {
+        return true;
+      } else {
+        return false;
+      }
+    turn_on_action:
+      - globals.set:
+          id: latch${number}
+          value: "true"
+      - switch.turn_on: '${relay_${number}_type}1'
+    turn_off_action:
+      - globals.set:
+          id: latch${number}
+          value: "false"
+      - switch.turn_off: '${relay_${number}_type}1'

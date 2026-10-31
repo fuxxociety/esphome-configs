@@ -1,0 +1,818 @@
+# https://esphome.io/guides/configuration-types.html#substitutions
+substitutions:
+
+  # substitutions can be changed here if you are using this file directly in the ESPHome dashboard.  The better approach is
+  # to incorporate this file as a package using the following packages: configuration, and then overwrite these substitutions
+  # in your local yaml file by redefining them.
+  #
+  # packages:
+  #   kauf.plf12: github://KaufHA/PLF12/kauf-plug.yaml
+  #
+
+  nameprefix: "plug-"
+
+  # https://esphome.io/components/esphome.html#esphome-creators-project
+  project_name: Enbrighten.Plug
+  project_ver_num: ""
+  project_ver_let: y
+
+  # https://esphome.io/components/switch/gpio.html?highlight=restore_mode
+  sub_restore_mode: RESTORE_DEFAULT_ON  # overwrite to change boot up behavior of relay
+
+  # GPIO definitions
+  sub_button_pin:   P26
+  sub_led_pin:      P7
+  sub_relay1_pin:    P24
+
+    # debounce specifications
+  sub_default_debounce: "20"
+  sub_min_debounce:     "10"
+
+  sub_on_press:         script_do_nothing  # executes right when button is init>
+  sub_on_release:       script_do_nothing  # executes right when button is rele>
+  sub_on_hold_30s:      script_force_ap    # executes right when button has bee>
+
+  sub_on_turn_on:       script_do_nothing
+  sub_on_turn_off:      script_do_nothing
+
+  # an extra script that, if running, will stop the relay from toggling on button release.
+  # used to not toggle when WiFi AP is re-enabled on update bin file.
+  sub_toggle_check:     script_force_ap
+
+  # made this a substitution so that the update bin file and yaml compiled versions can have different defaults
+  default_button_config: "Toggle on Press"
+
+
+# https://esphome.io/guides/automations.html#global-variables
+globals:
+  - id: global_press_time
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: global_has_debounce
+    type: boolean
+    restore_value: no
+    initial_value: "false"
+
+  # ============================================================================= #
+  # Irrigation time remaining
+  - id: remaining_time1
+    type: int
+    restore_value: no
+    initial_value: "300"
+  # repeat for each zone
+
+  # ============================================================================= #
+  # Store previous values to verify change.
+  - id: remaining_time1_previous
+    type: int
+    restore_value: no
+    initial_value: "0"
+  # repeat for each zone
+
+
+#packages:
+#  common: !inclboard:ude modules/BK7231T.yaml
+bk72xx:
+  board: generic-bk7231n-qfn32-tuya
+
+# https://esphome.io/components/esphome.html
+esphome:
+  name: ${nameprefix}${name}
+
+  project:
+    name: $project_name
+    version: $project_ver_num($project_ver_let)
+
+  on_boot:
+    then:
+        # implementing on_boot automation as a script makes it run in parallel
+        # with any other on_boot scripts.
+      - script.execute: script_set_power_leds
+      - script.execute: on_wifi_connect
+
+  includes:
+    - devices/irrigation.h
+
+# https://esphome.io/components/external_components.html
+# testing, utilizing smart outlet with BK8271T
+external_components:
+  - source:
+      type: git
+      url: https://github.com/KaufHA/common
+      ref: v2026.10.4
+    components: [ wifi, switch, web_server ]
+    refresh: 0s
+#  - source:
+#      type: git
+#      url: https://github.com/fuxxociety/kauf-common
+#    components: [ web_server ]
+#    refresh: 0s
+
+
+# https://esphome.io/components/wifi.html
+wifi:
+
+  # **** ENTER WI-FI CREDENTIALS HERE, USING SECRETS.YAML RECOMMENDED ****
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # using fast_connect as default since it is required for hidden networks.
+  fast_connect: true
+
+  # enable wifi ap with ridiculous timeout so it does not normally turn on.
+  ap:
+    ap_timeout: 2147483647ms  # maximum 32 bit value.  About 3.5 weeks in milliseconds.
+
+
+# https://esphome.io/components/captive_portal.html
+captive_portal:
+
+
+# https://esphome.io/components/logger.html
+logger:
+
+# https://esphome.io/components/api.html
+api:
+  id: kauf_api
+
+
+# https://esphome.io/components/ota.html
+ota:
+  - platform: esphome
+    password: !secret esphome_ota_password
+    on_error:
+      - button.press: restart_button
+
+
+# https://esphome.io/components/web_server.html
+#web_server:
+#  local: true
+#  disable: $disable_webserver
+
+# https://esphome.io/components/binary_sensor/index.html
+binary_sensor:
+  # ============================================================================= #
+  # Bring input_boolean buttons from HA to disable schedules
+  - platform: homeassistant
+    id: ui_disable_zone1
+    entity_id: input_boolean.irrigation_disable_schedule_zone1
+    on_state:
+      then:
+        # Update the next scheduled run time.
+        - text_sensor.template.publish:
+            id: irrigation_zone1_next
+            state: !lambda |-
+              if (id(ui_disable_zone1).state) {
+                return {"Schedule Disabled"};
+              } else {
+                return update_next_runtime(id(irrigation_zone1_times).state, id(irrigation_zone1_days).state);
+              }
+  # and repeat for each zone
+
+  # button input toggles relay and thereby power led
+  # https://esphome.io/components/binary_sensor/gpio.html
+  - platform: gpio
+    id: button_in
+    name: $friendly_name Button
+    pin:
+      number: $sub_button_pin
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    on_press:
+      - lambda: |-
+          // store time of press and clear duration sensor
+          id(global_press_time) = esphome::millis();
+          id(sensor_press_duration).publish_state(0);
+
+          // toggle if configured for toggle on press
+          if (id(select_button).state == "Toggle on Press") {
+            id(relay1).toggle(); }
+      - script.execute: $sub_on_press
+      - script.execute: script_30s_timer
+    on_release:
+      - lambda: |-
+          // set duration sensor
+          id(sensor_press_duration).publish_state(esphome::millis() - id(global_press_time) + id(number_debounce).state);
+
+          // toggle if configured on release and toggle check script is not running.
+          if (  (id(select_button).state == "Toggle on Release") && !id($sub_toggle_check).is_running() ) {
+            id(relay1).toggle();
+          }
+      - script.execute: $sub_on_release
+      - script.stop: script_30s_timer
+    filters:
+      - delayed_on: !lambda return id(number_debounce).state;
+
+
+# https://esphome.io/guides/automations.html#script-component
+script:
+
+    # sets LEDs to proper state based on LED configuration and relay state
+  - id: script_set_power_leds
+    then:
+      - lambda: |-
+          // if led follows power status
+          if ( (id(select_bled).state == "Power Status") || (id(select_bled).state == "Error and Power") ) {
+            id(led).publish_state(id(relay1).state); }
+
+          // if led follows inverse of power status
+          else if ( (id(select_bled).state == "Invert Power Status") || (id(select_bled).state == "Error and Invert Power") ) {
+            id(led).publish_state(!id(relay1).state); }
+
+      - script.execute: script_save_changes
+
+  - id: blink_status_led
+    mode: queued
+    then:
+
+      - lambda: |-
+          // turn on led if configured for error status
+          if ( (id(select_bled).state == "Error Status")  ||
+               (id(select_bled).state == "Error and Power") ||
+               (id(select_bled).state == "Error and Invert Power") ) {
+            id(led).turn_on(); }
+
+      - delay: 350ms
+
+      - lambda: |-
+          // turn off led if configured for error status
+          if ( (id(select_bled).state == "Error Status")  ||
+               (id(select_bled).state == "Error and Power") ||
+               (id(select_bled).state == "Error and Invert Power") ) {
+            id(led).turn_off(); }
+
+      - delay: 1150ms
+
+      - if:
+          condition:
+            - lambda: return ( ( (App.get_app_state() & STATUS_LED_ERROR) != 0u) || ((App.get_app_state() & STATUS_LED_WARNING) != 0u) );
+          then:
+            - script.execute: blink_status_led      # repeat as long as error/warning exists
+          else:
+            - script.execute: script_set_power_leds # done with status LED, restore light power status
+
+  - id: script_setting_reboot
+    mode: restart          # only reboot plug settings are static for 10s.  Another change restarts timer.
+    then:
+      - lambda: ESP_LOGCONFIG("kauf-plug.yaml","Setting change requiring reboot detected, rebooting in 10 seconds to effect change.");
+      - delay: 10s
+      - button.press: restart_button
+
+  - id: script_30s_timer
+    then:
+      - delay: !lambda return (30000-id(number_debounce).state);
+      - script.execute: $sub_on_hold_30s
+
+  - id: on_wifi_connect
+    then:
+
+        # wait until wifi connects
+      - wait_until: wifi.connected
+
+      - lambda: |-
+          ESP_LOGD("KAUF on_boot","------------------->>>>>>>>>>>>>>>>>   wifi connected, cranking ap timeout back up");
+          wifi_wificomponent_id->set_ap_timeout(2147483647);
+
+  - id: script_force_ap
+    then:
+      - logger.log: "------------------->>>>>>>>>>>>>>>>>   HELD BUTTON 30 SECONDS, FORCING AP"
+
+      # overwrite software defined credentials to force ap to turn on.
+      - lambda: wifi::global_wifi_component->save_wifi_sta("initial_ap","asdfasdfasdfasdf");
+
+      # blink LED for 10s then restart to get captive portal to turn on.
+      - script.execute: blink_led
+      - delay: 10s
+      - button.press: restart_button
+
+    # blink LED forever. Used when button is held to re-enable AP. Stops blinking because plug restarts.
+  - id: blink_led
+    mode: queued
+    then:
+      - switch.toggle: led
+      - delay: 333ms
+      - script.execute: blink_led
+
+  - id: script_do_nothing
+    then:
+      - lambda: return;
+
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+
+
+# pwm outputs for LED so it can be dimmed
+# https://esphome.io/components/output/libretiny_pwm.html
+output:
+  - platform: libretiny_pwm
+    id: led_pwm
+    frequency: 200 Hz
+    pin: $sub_led_pin
+    inverted: true
+
+# https://esphome.io/components/switch/index.html
+switch:
+  # ============================================================================= #
+  # Virtual Zone Switches which toggle the relay, and store the current state.
+  - platform: template
+    name: "Irrigation Zone 1"
+    id: irrigation_zone1
+    icon: mdi:sprinkler
+    lambda: return id(relay1).state;
+    optimistic: true
+    turn_on_action:
+      # Turn on if not disabled.
+      if:
+        condition:
+          lambda: return id(irrigation_zone1_duration).state >= 1;
+        then:
+          - switch.turn_on: relay1
+    turn_off_action:
+      - switch.turn_off: relay1
+  # repeat for each zone
+
+  - platform: gpio
+    id: relay1
+    name: "Irrigation Zone 1 Relay"
+    icon: mdi:sprinkler #mdi:electric-switch
+    pin:
+      number: $sub_relay1_pin
+      mode: OUTPUT
+      inverted: true
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+      then:
+        # Carried over from kauf config
+        - script.execute: script_set_power_leds
+        - script.execute: $sub_on_turn_on
+        # Start the countdown timer.
+        - globals.set:
+            id: remaining_time1
+            value: !lambda return id(irrigation_zone1_duration).state * 60;
+        # Show the remaining time.
+        - sensor.template.publish:
+            id: irrigation_zone1_remaining
+            state: !lambda return id(irrigation_zone1_duration).state;
+          # Show the "Next Time" as "now".
+        - text_sensor.template.publish:
+            id: irrigation_zone1_next
+            state: "now"
+        # state NOW on original code, change to your preferred language
+    on_turn_off:
+     then:
+        # Carried over from kauf config
+        - script.execute: script_set_power_leds
+        - script.execute: $sub_on_turn_off
+        # Stop the countdown timer
+        - sensor.template.publish:
+            id: irrigation_zone1_remaining
+            state: "0"
+        # Update the next scheduled run time.
+        - text_sensor.template.publish:
+            id: irrigation_zone1_next
+            state: !lambda |- 
+              if (id(ui_disable_zone1).state) {
+                return {"Schedule Disabled"};
+              } else {
+                return update_next_runtime(id(irrigation_zone1_times).state, id(irrigation_zone1_days).state);
+              }
+  # repeat for each zone
+
+  - platform: template
+    name: Stop Active Irrigation Zones
+    id: stop_all_zones
+    icon: mdi:close-octagon-outline
+    optimistic: true
+    turn_on_action:
+      - switch.turn_off: relay1
+      # repeat switch.turn_off for each zone
+      - delay: 2s
+      - switch.turn_off: stop_all_zones
+
+  # relay output
+  # https://esphome.io/components/switch/gpio.html
+#  - platform: gpio
+#    id: relay
+#    name: $friendly_name
+#    pin: $sub_relay_pin
+#    entity_category: ''
+#    restore_mode: $sub_restore_mode
+
+    # https://esphome.io/components/switch/template.html
+  - platform: template
+    id: switch_no_hass
+    name: $friendly_name No HASS
+    optimistic: true
+    entity_category: config
+    disabled_by_default: $disable_entities
+    icon: mdi:toggle-switch-off-outline
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_on:
+      - lambda: |-
+          id(kauf_api).set_reboot_timeout(0);  // 0 disables auto rebooting and also new status led blinking.  doesn't stop current status led blinking
+          id(kauf_api).status_clear_warning(); // stops current status led blinking, timeout 0 keeps it from restarting
+      - script.execute: script_save_changes
+    on_turn_off:
+      - lambda: id(kauf_api).set_reboot_timeout(900000);
+      - script.execute: script_save_changes
+
+  - platform: template
+    id: led
+    name: $friendly_name led
+    optimistic: true
+    entity_category: config
+    disabled_by_default: $disable_entities
+    icon: mdi:led-outline
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: id(led_pwm).set_level(id(led_brightness).state/100);
+    on_turn_off:
+      - lambda: id(led_pwm).set_level(0.0);
+
+#  - platform: template
+#    id: switch_early_publish
+#    name: $friendly_name Early Publish
+#    optimistic: true
+#    entity_category: config
+#    disabled_by_default: $disable_entities
+#    restore_mode: RESTORE_DEFAULT_OFF
+#    on_turn_on:
+#      - lambda: id(hlw_main).enable_early_publish();
+#    on_turn_off:
+#      - lambda: id(hlw_main).disable_early_publish();
+
+
+# https://esphome.io/components/button/index.html
+# https://esphome.io/components/button/restart.html
+button:
+  - platform: restart
+    id: restart_button
+    name: $friendly_name Restart Firmware
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+
+
+# clock input from Home Assistant used to calculate total daily energy
+# https://esphome.io/components/time.html#home-assistant-time-source
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+    timezone: America/Chicago
+    # Time based automations.
+    on_time:
+      - seconds: 0
+        minutes: /1
+        then:
+          - if:
+              condition:
+                - binary_sensor.is_off: ui_disable_zone1
+              then:
+                - lambda: |-
+                    if (scheduled_runtime(id(irrigation_zone1_next).state.c_str())) {
+                      id(irrigation_zone1).turn_on(); }
+          # and repeat for each zone...
+
+  # Grab time from sntp server ?
+  - platform: sntp
+    id: esptime
+    servers:
+      - 10.10.32.1
+      - 10.10.24.2
+    timezone: America/Chicago
+
+# https://esphome.io/components/sensor/index.html
+sensor:
+
+  # ============================================================================= #
+  # Retrieve durations settings from the Home Assistant UI.
+  - platform: homeassistant
+    id: ui_zone1_duration
+    entity_id: input_number.irrigation_zone1_duration
+    on_value:
+      #if:
+      #  condition:
+      #    api.connected:
+      then:
+        - sensor.template.publish:
+            id: irrigation_zone1_duration
+            state: !lambda return id(ui_zone1_duration).state;
+  # repeat for each zone
+
+  # ============================================================================= #
+  # Store durations.
+  - platform: template
+    name: Irrigation Duration Zone 1
+    id: irrigation_zone1_duration
+    accuracy_decimals: 0
+    unit_of_measurement: min
+    icon: mdi:camera-timer
+  # repeat for each zone
+
+  # ============================================================================= #
+  # Countdown sensors.
+  - platform: template
+    name: Zone 1 Time Remaining
+    id: irrigation_zone1_remaining
+    lambda: "return 0;"
+    accuracy_decimals: 0
+    unit_of_measurement: min
+    icon: mdi:timer
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: return id(remaining_time1) == 0;
+            then:
+              - switch.turn_off: relay1
+  # repeat for each zone
+
+  # https://esphome.io/components/sensor/uptime.html
+#  - platform: uptime
+#    name: $friendly_name Uptime
+#    update_interval: 60s
+#    entity_category: diagnostic
+#    disabled_by_default: $disable_entities
+
+   # https://esphome.io/components/sensor/template.html
+  - platform: template
+    name: $friendly_name Button Press Duration
+    id: sensor_press_duration
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+    unit_of_measurement: ms
+    icon: mdi:timer-outline
+
+
+# https://esphome.io/components/number/index.html
+# https://esphome.io/components/number/template.html
+number:
+
+  - platform: template
+    id: exec_hour_cyc1
+    name: Cycle 1 Run Hour
+    optimistic: true
+    #initial_value: 6
+    min_value: 0
+    max_value: 23
+    restore_value: true
+    step: 1
+
+  - platform: template
+    id: exec_minute_cyc1
+    name: Cycle 1 Run Minute
+    optimistic: true
+    restore_value: true
+    #initial_value: 0
+    min_value: 0
+    max_value: 60
+    step: 10
+
+  - platform: template
+    name: $friendly_name led Brightness
+    min_value: 1
+    max_value: 100
+    step: 1
+    initial_value: 75
+    id: led_brightness
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "%"
+    mode: slider
+    icon: mdi:brightness-percent
+    set_action:
+      - script.execute: script_save_changes
+    on_value:
+      - lambda: if ( id(led).state ) id(led_pwm).set_level(x/100);
+
+  - platform: template
+    name: $friendly_name Debounce Time
+    min_value: $sub_min_debounce
+    max_value: 2000
+    step: 1
+    initial_value: $sub_default_debounce
+    id: number_debounce
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "ms"
+    mode: box
+    disabled_by_default: $disable_entities
+
+
+# https://esphome.io/components/select/index.html
+# https://esphome.io/components/select/template.html
+select:
+
+  - platform: template
+    name: $friendly_name Button Config
+    id: select_button
+    optimistic: true
+    options:
+      - Toggle on Press
+      - Toggle on Release
+      - Don't Toggle
+    initial_option: $default_button_config
+    restore_value: true
+    icon: mdi:circle-double
+    entity_category: config
+    set_action:
+      - script.execute: script_save_changes
+
+  - platform: template
+    name: $friendly_name led config
+    id: select_bled
+    optimistic: true
+    entity_category: config
+    options:
+      - Power Status
+      - No Automation
+      - Invert Power Status
+      - Error Status
+      - Error and Power
+      - Error and Invert Power
+    initial_option: Power Status
+    restore_value: true
+    icon: mdi:led-on
+    set_action:
+      - script.execute: script_save_changes
+    on_value:
+      - if:
+          condition:
+            - lambda: return ( x == "Error Status" );
+          then:
+            - switch.turn_off: led
+      - script.execute: script_set_power_leds
+
+#  - platform: template
+#    name: $friendly_name Boot State
+#    id: select_boot_state
+#    optimistic: true
+#    options:
+#      - "Restore Power Off State"
+#      - "Invert Power Off State"
+#      - "Always On"
+#      - "Always Off"
+#      - "YAML Configured ($sub_restore_mode)"
+#    initial_option: "Restore Power Off State"
+#    restore_value: true
+#    icon: mdi:restart-alert
+#    entity_category: config
+#    on_value:
+#      - lambda: |-
+#          if ( x == "Restore Power Off State")
+#            relay->set_restore_mode(SWITCH_RESTORE_DEFAULT_OFF);
+#          else if ( x == "Invert Power Off State")
+#            relay->set_restore_mode(SWITCH_RESTORE_INVERTED_DEFAULT_OFF);
+#          else if ( x == "Always On")
+#            relay->set_restore_mode(SWITCH_ALWAYS_ON);
+#          else if ( x == "Always Off")
+#            relay->set_restore_mode(SWITCH_ALWAYS_OFF);
+#          else
+#            relay->set_restore_mode(SWITCH_$sub_restore_mode);
+#
+#          // republish state so it gets saved if necessary
+#          // but make sure relay already set up, don't want to publish here on boot
+#          if ( id(relay1).is_setup() ) id(relay1).publish_state(id(relay1).state, true);
+#
+#      - script.execute: script_save_changes
+
+
+# Send IP Address to HA
+# https://esphome.io/components/text_sensor/wifi_info.html
+text_sensor:
+
+  # ============================================================================= #
+  # Retrieve list of times from the Home Assistant UI.
+  - platform: homeassistant
+    id: ui_zone1_times
+    entity_id: input_text.irrigation_zone1_times
+    on_value:
+      #if:
+      #  condition:
+      #    api.connected:
+      then:
+        #- delay: 10sec
+        - text_sensor.template.publish:
+            id: irrigation_zone1_times
+            state: !lambda return id(ui_zone1_times).state;
+  # repeat for each zone
+
+  # ============================================================================= #
+  # Store time lists.
+  - platform: template
+    name: Zone 1 Schedule
+    id: irrigation_zone1_times
+    on_value:
+      then:
+        # Update the next scheduled run time.
+        - text_sensor.template.publish:
+            id: irrigation_zone1_next
+            state: !lambda |-
+              if (id(ui_disable_zone1).state) {
+                return {"Schedule Disabled"};
+              } else {
+                return update_next_runtime(id(irrigation_zone1_times).state, id(irrigation_zone1_days).state);
+              }
+  # repeat for each zone
+
+  # ============================================================================= #
+  # Retrieve list of days from the Home Assistant UI.
+  - platform: homeassistant
+    id: ui_zone1_days
+    entity_id: input_text.irrigation_zone1_days
+    on_value:
+      #if:
+      #  condition:
+      #    api.connected:
+      then:
+        #- delay: 10sec
+        - text_sensor.template.publish:
+            id: irrigation_zone1_days
+            state: !lambda return id(ui_zone1_days).state;
+  # repeat for each zone
+
+  # ============================================================================= #
+  # Store time lists.
+  - platform: template
+    name: Zone 1 Days
+    id: irrigation_zone1_days
+    on_value:
+      then:
+        # Update the next scheduled run time.
+        - text_sensor.template.publish:
+            id: irrigation_zone1_next
+            state: !lambda |-
+              if (id(ui_disable_zone1).state) {
+                return {"Schedule Disabled"};
+              }
+              else {
+              return update_next_runtime(id(irrigation_zone1_times).state, id(irrigation_zone1_days).state);
+              }
+  # repeat for each zone
+
+  # ============================================================================= #
+  # Set the next scheduled time.
+  - platform: template
+    name: Zone 1 Next Watering
+    id: irrigation_zone1_next
+    icon: mdi:calendar-clock
+  # repeat for each zone
+
+  - platform: template
+    name: "Current time"
+    lambda: |-
+      char str[17];
+      time_t currTime = id(homeassistant_time).now().timestamp;
+      strftime(str, sizeof(str), "%Y-%m-%d %H:%M", localtime(&currTime));
+      return  { str };
+    update_interval: 60s
+
+  - platform: wifi_info
+    ip_address:
+      name: $friendly_name IP Address
+      disabled_by_default: $disable_entities
+
+
+# emulate status_led
+# https://esphome.io/guides/automations.html#interval-component
+interval:
+
+  # emulate status_led
+  - interval: 5s
+    then:
+    - lambda: |-
+        if ( ( ((App.get_app_state() & STATUS_LED_ERROR  ) != 0u) ||
+               ((App.get_app_state() & STATUS_LED_WARNING) != 0u) )
+            && !id(blink_status_led).is_running() )
+          id(blink_status_led).execute();
+
+  # Update the countdown timers every 5 seconds.
+  - interval: 5s
+    then:
+      - lambda: |-
+          if (id(remaining_time1) > 0) {
+            // Store the previous time.
+            id(remaining_time1_previous) = id(remaining_time1);
+            // When the relay is on.
+            if (id(relay1).state) {
+              // Decrement the timer.
+              id(remaining_time1) -= 5;
+              // Turn off the relay when the time reaches zero... or the remaining time fails a sanity check!
+              //if (id(remaining_time1) <= 0 || id(irrigation_zone1_remaining).state > id(irrigation_zone1_duration).state){
+              if (id(remaining_time1) <= 0) {
+                id(relay1).turn_off();
+                id(remaining_time1) = 0;
+              }
+            }
+            // Update the remaining time display.
+            if (id(remaining_time1_previous) != id(remaining_time1)) {
+              id(irrigation_zone1_remaining).publish_state( (id(remaining_time1)/60) + 1 );
+            }
+          }

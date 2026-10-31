@@ -1,0 +1,17 @@
+---
+# Tuya WB8P chip contains a Beken BK7231T MCU
+# https://developer.tuya.com/en/docs/iot/wb8p-module-datasheet?id=K9fwx4f89tvzd
+
+substitutions:
+  nameprefix: ''
+  namesuffix: ''
+
+bk72xx:
+  board: generic-bk7231t-qfn32-tuya
+
+esphome:
+  name: "${nameprefix}${system_name}${namesuffix}"
+  comment: "${device_description}"
+
+packages:
+  <<: !include_dir_named ./components/common

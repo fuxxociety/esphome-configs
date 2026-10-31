@@ -1,0 +1,119 @@
+﻿# Diagnostic firmware for chasing ESPHome Wi-Fi drops on UniFi.
+# Credentials come from config/secrets.yaml (wifi_ssid, wifi_password) - not committed.
+#
+# Each experiment is a substitution so it can be flipped from the CLI, e.g.
+#   esphome -s power_save NONE -s fast_connect "false" run config/wifi-diag.yaml
+
+substitutions:
+  name: wifi-diag
+  power_save: NONE          # NONE | LIGHT | HIGH
+  output_power: "20dB"      # try 17dB if the AP is very close / multipath
+  fast_connect: "false"     # true = skip scan, stick to stored BSSID-less connect
+  wifi_log_level: VERBOSE
+
+esphome:
+  name: ${name}
+  friendly_name: WiFi Diag
+
+esp8266:
+  board: nodemcuv2
+  restore_from_flash: true
+
+logger:
+  level: VERBOSE
+  baud_rate: 115200
+  logs:
+    wifi: ${wifi_log_level}
+    wifi_esp8266: ${wifi_log_level}
+    api: VERBOSE
+    api.connection: VERBOSE
+    sensor: INFO
+    text_sensor: DEBUG   # BSSID / reset reason changes are the interesting part
+    component: DEBUG
+    scheduler: DEBUG
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: ${power_save}
+  output_power: ${output_power}
+  fast_connect: ${fast_connect}
+  reboot_timeout: 15min
+  ap:
+    ssid: "${name} fallback"
+  on_connect:
+    - logger.log:
+        level: WARN
+        format: "DIAG wifi_connected"
+  on_disconnect:
+    - logger.log:
+        level: WARN
+        format: "DIAG wifi_disconnected"
+
+captive_portal:
+improv_serial:
+
+api:
+  # 0s = never self-reboot because no Home Assistant is connected during the test
+  reboot_timeout: 0s
+  on_client_connected:
+    - logger.log:
+        level: WARN
+        format: "DIAG api_client_connected %s %s"
+        args: ["client_info.c_str()", "client_address.c_str()"]
+  on_client_disconnected:
+    - logger.log:
+        level: WARN
+        format: "DIAG api_client_disconnected %s %s"
+        args: ["client_info.c_str()", "client_address.c_str()"]
+
+ota:
+  - platform: esphome
+
+debug:
+  update_interval: 30s
+
+interval:
+  - interval: 30s
+    then:
+      - logger.log:
+          level: INFO
+          format: "DIAG heartbeat uptime=%us rssi=%.0f bssid=%s ch=%d heap=%u"
+          args:
+            - "millis() / 1000"
+            - "id(rssi).state"
+            - "WiFi.BSSIDstr().c_str()"
+            - "WiFi.channel()"
+            - "ESP.getFreeHeap()"
+
+sensor:
+  - platform: wifi_signal
+    id: rssi
+    name: "WiFi Signal"
+    update_interval: 10s
+  - platform: uptime
+    name: "Uptime"
+    update_interval: 30s
+  - platform: debug
+    free:
+      name: "Heap Free"
+    fragmentation:
+      name: "Heap Fragmentation"
+    block:
+      name: "Heap Max Block"
+    loop_time:
+      name: "Loop Time"
+
+text_sensor:
+  - platform: wifi_info
+    bssid:
+      name: "BSSID"
+    ip_address:
+      name: "IP"
+    ssid:
+      name: "SSID"
+  - platform: debug
+    reset_reason:
+      name: "Reset Reason"
+  - platform: version
+    name: "ESPHome Version"

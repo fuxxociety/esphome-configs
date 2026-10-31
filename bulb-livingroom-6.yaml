@@ -1,0 +1,19 @@
+substitutions:
+  device_description: LightingInside Candlabra Smart Bulb / Tuya CBLC5 MCU / SM2235EGH LED driver
+  system_name: livingroom      # **** CHANGE DEVICE NAME TO SOMETHING UNIQUE PER DEVICE.  RENAME YAML FILE TO SAME NAME.    ****
+                               # **** USE DASHES (-) INSTEAD OF SPACES OR UNDERSCORE (_).  USE ONLY LOWER CASE LETTERS.     ****
+  namesuffix: '-6'             #
+  servicename: 'bulb_livingroom_6'
+  friendly_name: 'Living Room' # Displayed in HA frontend
+
+  # SM2235 config
+  datapin: P24
+  clockpin: P6
+
+  light_restore_mode: RESTORE_DEFAULT_ON
+
+  disable_entities:  "true"     # set to "false" to have all entities show up in Home Assistant automatically
+  disable_webserver: "true"    # set to "true" to disable the webserver listening on port 80.
+
+packages:
+  bulb: !include ./devices/LightingInside-Bulb-B11_Candleabra.yaml

@@ -1,0 +1,61 @@
+---
+substitutions:
+  # Entity names for the button itself.
+  # Re-define these in parent yaml if needed.
+  sub_button_id: main_button
+  sub_button_name: Button
+
+  # substitutions for scripts to execute based on button actions.
+  # the built-in automations for the button will still do everything they normally do even
+  # when these substitutions are redefined.  Redefining these will not stop the ui switch from toggling.
+  # The button configuration select entity must be set to disabled to stop the button from toggling the >
+  # The button press duration sensor will also still update even with these redefined.
+  sub_on_press:                script_do_nothing                   # executes right when button is press>
+  sub_on_release:              script_do_nothing                   # executes right when button is relea>
+  sub_on_single_press:         script_do_nothing                   # executes when the button is single >
+  sub_on_double_press:         script_do_nothing                   # executes when the button is double >
+  sub_on_short_hold:           script_do_nothing                   # executes when the button is held fo>
+  sub_on_release_without_hold: script_do_nothing                   # executes when the button is release>
+  sub_on_3s_hold:              script_do_nothing                   # executes when the button is held fo>
+  sub_on_10s_hold:             script_do_nothing                   # executes when the button is held fo>
+  sub_on_30s_hold:             script_do_nothing                   # reset wifi credentials, overwrite t>
+
+  # button press substitutions
+  sub_double_press_max_gap: 333ms
+  sub_hold_time: 750ms
+  sub_3s_hold_time: 3s
+  sub_10s_hold_time: 10s
+  sub_button_sensor_duration: 500ms
+
+
+packages:
+  scripts: !include gpio_button/button_scripts.yaml
+
+globals:
+  - <<: !include gpio_button/button_globals.yaml
+
+
+binary_sensor:
+
+  # https://esphome.io/components/binary_sensor/gpio.html
+  - platform: gpio
+    id: ${sub_button_id}
+    name: ${sub_button_name}
+    pin:
+      number: ${sub_button_pin}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    on_press:
+        <<: !include gpio_button/button_press.yaml
+    on_release:
+        <<: !include gpio_button/button_release.yaml
+    on_multi_click:
+      - <<: !include gpio_button/button_single_press.yaml
+      - <<: !include gpio_button/button_double_press.yaml
+      - <<: !include gpio_button/button_hold.yaml
+      - <<: !include gpio_button/button_release_without_hold.yaml
+      - <<: !include gpio_button/button_3s_hold.yaml
+      - <<: !include gpio_button/button_10s_hold.yaml
+      - <<: !include gpio_button/button_30s_hold.yaml

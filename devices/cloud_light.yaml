@@ -1,0 +1,83 @@
+---
+# Device: Hacked LED mood light
+#
+# WB3S Chip
+# [ ] 3-Pad Touch Sensor (PWM3/MCUpin-P9/ArduinoPin-D5)
+# [x] Rear Button (ArduinoPin-D9)
+# [ ] IR Receiver
+# [x] Oscillating motor (P14/MCUpin-P14/ArduinoPin-D1)
+# [x] Red LED (PWM2/MCUpin-P8/ArduinoPin-D4)
+# [x] Green LED (PWM1/MCUpin-P7/ArduinoPin-D3)
+# [x] Blue LED (PWM5/MCUpin-P26/ArduinoPin-D2)
+#
+substitutions:
+  bulb_id: bulb1
+
+packages:
+  common: !include ../modules/BK7231T.yaml
+  colorscript: !include light-effects/effects_script_rgbonly.yaml
+
+# See https://docs.libretuya.ml/boards/generic-bk7231t-qfn32-tuya/
+# for Board-BK7231T-Arduino pin assignments
+binary_sensor:
+- platform: gpio
+  pin:
+    inverted: true
+    number: D9
+  name: '${friendly_name} Button'
+  internal: true
+  on_click:
+    then:
+      - light.toggle: ${bulb_id}
+
+#remote_receiver:
+#  pin: D5 #Label-PWM3/MCUpin-P9/ArduinoPin-D5
+#  dump: all
+
+output:
+  # LEDs
+  - platform: libretiny_pwm
+    id: output_red
+    pin: D4 #Label-PWM2/MCUpin-P8/ArduinoPin-D4
+    frequency: 90 Hz
+    zero_means_zero: true
+    power_supply: oscillate
+  - platform: libretiny_pwm
+    id: output_green
+    pin: D3 #Label-PWM1/MCUpin-P7/ArduinoPin-D3
+    frequency: 90 Hz
+    power_supply: oscillate
+    zero_means_zero: true
+  - platform: libretiny_pwm
+    id: output_blue
+    pin: D2 #Label-PWM5/MCUpin-P26/ArduinoPin-D2
+    frequency: 90 Hz
+    power_supply: oscillate
+    zero_means_zero: true
+
+power_supply:
+  - id: 'oscillate'
+    pin: D1 #Label-P14/MCUpin-P14/ArduinoPin-D1
+
+light:
+  - platform: rgb
+    name: ${servicename}
+    id: ${bulb_id}
+    red: output_red
+    green: output_green
+    blue: output_blue
+    gamma_correct: 1.0
+    restore_mode: $light_restore_mode
+    on_turn_on:
+      - homeassistant.event:
+          event: esphome.light
+          data:
+            device_id: '${system_name}'
+            action: 'on'
+    on_turn_off:
+      - homeassistant.event:
+          event: esphome.light
+          data:
+            device_id: '${system_name}'
+            action: 'off'
+    effects: !include light-effects/effects_rgbw.yaml

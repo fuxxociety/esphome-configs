@@ -1,0 +1,10 @@
+# Treatlife SS01S light switch built for the 1 MB flash layout (esp01_1m). For a unit whose existing firmware uses that
+# layout (front entry): a 4 MB image on a 1 MB chip would not boot, a 1 MB image boots on any flash size.
+#   packages: {device: !include templates/treatlife/ss01s-light-1m.yaml}
+substitutions:
+  device_description: Treatlife SS01S light switch (1 MB layout)
+
+packages:
+  platform: !include ../../common/platforms/esp8285.yaml
+  hardware: !include ss01s-hardware.yaml
+  load: !include ../../common/switch/load-smart-light.yaml

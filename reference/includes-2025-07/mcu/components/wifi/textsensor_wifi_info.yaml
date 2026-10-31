@@ -1,0 +1,25 @@
+---
+# WiFi Info Text Sensor
+#
+# The wifi_info text sensor platform exposes different WiFi information via
+# text sensors.
+#
+# https://esphome.io/components/text_sensor/wifi_info.html
+#
+platform: wifi_info
+ip_address:
+  name: IP Address
+  entity_category: diagnostic
+  disabled_by_default: $disable_entities
+ssid:
+  name: Connected SSID
+  entity_category: diagnostic
+  disabled_by_default: $disable_entities
+bssid:
+  name: Connected BSSID
+  entity_category: diagnostic
+  disabled_by_default: $disable_entities
+mac_address:
+  name: Connected MAC
+  entity_category: diagnostic
+  disabled_by_default: $disable_entities

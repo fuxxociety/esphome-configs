@@ -1,0 +1,31 @@
+---
+# Generic ESP-WROOM32 module with ESP32-D0WDQ6 chip
+# Xtensa single-/dual-core 32-bit LX6 microprocessor(s)
+# Wi-Fi: 802.11 b/g/n
+# Bluetooth: v4.2 BR/EDR and BLE (shares the radio with Wi-Fi)
+# 34 × programmable GPIOs
+# 12-bit SAR ADC up to 18 channels
+# 2 x 8-bit DAC
+#
+# https://espressif.com/en/products/hardware/esp32/overview
+#
+substitutions:
+  nameprefix: ''
+  namesuffix: ''
+
+esphome:
+  name: "${nameprefix}${system_name}${namesuffix}"
+  friendly_name: ${friendly_name}
+  comment: "${device_description}"
+  platformio_options:
+    board_build.flash_mode: dio
+
+esp32:
+  variant: ESP32C3
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf
+    version: recommended
+
+packages:
+  <<: !include_dir_named components/common

@@ -1,0 +1,23 @@
+# Enbrighten WFD4105 "square box" smart plug (BK7231N) powering a LAMP; its button behaves exactly like a wall switch
+# (common/switch/core.yaml: gestures, events, Relay Config modes, power-loss and HA-outage rules, LED feedback).
+# Pins from the previous config (aquarium-plug.yaml): relay P24, button P26 (inverted, bouncy: 100 ms),
+# one LED P7 (inverted). There is no second LED, so the error LED is a no-op.
+#   substitutions: {name: plug-craftroom-wash-1, friendly_name: Craft Room Wash 1, room_key: craftroom_wash}
+#   packages:      {device: !include templates/enbrighten/wfd4105.yaml}
+substitutions:
+  device_description: Enbrighten WFD4105 smart plug (lamp)
+  relay_pin: P24
+  button_pin: P26
+  status_led_pin: P7
+  button_debounce: 100ms
+
+packages:
+  platform: !include ../../common/platforms/bk7231n.yaml
+  core: !include ../../common/switch/core.yaml
+  led: !include ../../common/switch/led-onoff.yaml
+  load: !include ../../common/switch/load-light.yaml
+
+output:
+  - {platform: gpio, id: relay_output, pin: '${relay_pin}'}
+  - {platform: libretiny_pwm, id: status_led_output, pin: '${status_led_pin}', frequency: 200 Hz, inverted: true}
+  - {platform: template, id: error_led_output, type: float, write_action: [lambda: return;]}

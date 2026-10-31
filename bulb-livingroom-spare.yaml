@@ -1,0 +1,15 @@
+substitutions:
+  device_description: MOES Candlabra Smart Bulb / Builtin BK7231N MCU / BP5758 LED driver
+  system_name: livingroom               # **** CHANGE DEVICE NAME TO SOMETHING UNIQUE PER DEVICE.  RENAME YAML FILE TO SAME NAME.    ****
+                                        # **** USE DASHES (-) INSTEAD OF SPACES OR UNDERSCORE (_).  USE ONLY LOWER CASE LETTERS.     ****
+  namesuffix: '-spare'
+  servicename: 'bulb_livingroom_spare'                      #
+  friendly_name: 'Living Room'          # **** CHANGE FRIENDLY NAME TO SOMETHING UNIQUE PER DEVICE                                   ****
+
+  light_restore_mode: RESTORE_DEFAULT_ON  # change power-on action for main light entity
+
+#packages:
+#  bulb: !include ./devices/MOES/MOES-RGBCCT-2023B.yaml
+
+invalid:
+  device_not_exist:

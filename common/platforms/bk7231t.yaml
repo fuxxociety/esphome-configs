@@ -1,0 +1,6 @@
+# Beken BK7231T (Tuya WB-series modules): Treatlife SL10 WB8P bulbs.
+bk72xx:
+  board: generic-bk7231t-qfn32-tuya
+
+packages:
+  base: !include ../base.yaml

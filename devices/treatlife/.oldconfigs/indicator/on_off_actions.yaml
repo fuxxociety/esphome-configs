@@ -1,0 +1,5 @@
+---
+  - globals.set:
+      id: latch${number}
+      value: ${truefalse}
+  - switch.turn_${onoff}: 'switch${number}'

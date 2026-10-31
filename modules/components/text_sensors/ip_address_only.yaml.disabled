@@ -1,0 +1,7 @@
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: $friendly_name IP Address
+      entity_category: diagnostic
+      disabled_by_default: $disable_entities
+

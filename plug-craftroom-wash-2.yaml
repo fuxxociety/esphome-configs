@@ -1,0 +1,20 @@
+substitutions:
+  name: plug-craftroom-wash-2
+  friendly_name: Craft Room Wash 2
+  room_key: craftroom_wash
+  # this unit's BL0937 calibration (from kauf-plug-44ed55.yaml)
+  power_cal_1_in: '0.0'
+  power_cal_1_out: '0.0'
+  power_cal_2_in: '333.8'
+  power_cal_2_out: '60'
+  current_cal_1_in: '0.0'
+  current_cal_1_out: '0.0'
+  current_cal_2_in: '0.6'
+  current_cal_2_out: '0.515'
+  voltage_cal_1_in: '0.0'
+  voltage_cal_1_out: '0.0'
+  voltage_cal_2_in: '302.1'
+  voltage_cal_2_out: '117.1'
+
+packages:
+  device: !include templates/sengled/b1c-nb7.yaml

@@ -1,0 +1,7 @@
+substitutions:
+  name: bulb-diningroom-5
+  friendly_name: Dining Room 5
+  room_key: diningroom
+
+packages:
+  device: !include templates/treatlife/sl10-wb8p.yaml

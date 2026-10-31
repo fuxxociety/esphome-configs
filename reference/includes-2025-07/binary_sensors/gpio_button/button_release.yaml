@@ -1,0 +1,7 @@
+---
+then:
+  - logger.log: "Button Released"
+  - lambda: |-
+      // set press duration sensor
+      id(sensor_press_duration).publish_state(millis() - id(global_press_time));
+  - script.execute: $sub_on_release

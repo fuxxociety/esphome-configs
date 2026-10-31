@@ -1,0 +1,8 @@
+addressable_lambda:
+  name: Spinner
+  update_interval: 30ms
+  lambda: |-
+    static int pos = 0;
+    it.all() = Color::BLACK;
+    it[pos % it.size()] = current_color;
+    pos++;

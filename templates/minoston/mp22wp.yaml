@@ -1,0 +1,287 @@
+# Minoston MP22WP smart plug with power monitoring (BK7231T) on an APPLIANCE (dishwasher, dryer, washer).
+#
+# Unified into the shared scheme (decided 2026-10-31):
+#   - button = wall switch: common/switch/core.yaml gestures, events, Relay Config, HA-outage fallback, No HASS,
+#     hold feedback, 10 s reboot (replaces Button Config, Debounce Time, the 30 s force-AP hold)
+#   - power loss: the relay comes back as it was (power_loss_open_relay 'false'), unlike wall switches
+#   - LED: the original Kauf-style LED modes, common/switch/led-modes.yaml (LED Config + LED Brightness)
+#   - entity: a switch (switch.dryer), common/switch/load-switch.yaml
+# Kept LINE FOR LINE from the hand-tuned original (devices/Minoston-Smartplug-MP22WP.yaml, git tag baseline-2026.10): the whole
+# power-monitoring block below (pins/inversion, BL0937, calibration, Scale Power/Current/Voltage, 5000 W filter,
+# 15-sample moving average, Use Threshold, Device In Use, Total Daily Energy on HA time) and
+# the 5 min flash write interval. esphome.plug_in_use now carries devicename/room = room_key like every event. Dropped: Monitoring Update Interval (fixed 10 s, its YAML default), the legacy
+# monitor-mode migration, Boot State, Kauf external components, web server, the AP-timeout trick.
+# The verbatim port of the original is in git (tag minoston-verbatim-port).
+#
+# Device file:
+#   substitutions: {name: plug-dryer, friendly_name: Dryer, room_key: dryer}
+#   packages:      {device: !include templates/minoston/mp22wp.yaml}
+substitutions:
+  device_description: Minoston MP22WP smart plug (appliance)
+
+  # https://esphome.io/components/esphome.html#esphome-creators-project
+  project_name: Minoston.MP22WP
+  project_ver_num: "2.06"
+  project_ver_let: y
+
+  # GPIO definitions (original)
+  relay_pin: P6
+  button_pin: P10
+  status_led_pin: P11
+  sub_pm_sel_pin: P24
+  sub_pm_cf_pin: P7
+  sub_pm_cf1_pin: P8
+  button_debounce: 20ms    # the original sub_default_debounce
+
+  # appliances keep power through an outage (the plugs ran RESTORE_DEFAULT_ON)
+  power_loss_open_relay: 'false'
+  load_restore_mode: RESTORE_DEFAULT_ON
+
+  # substitutions for power monitoring calibration (original)
+  current_resistor_val: "0.001"
+  voltage_divider_val: "852"
+  sub_hlw_model: BL0937
+  power_cal_val1_in: "0.0"
+  power_cal_val1_out: "0.0"
+  power_cal_val2_in: "500.0"
+  power_cal_val2_out: "500.1"
+  current_cal_val1_in: "5.0"
+  current_cal_val1_out: "5.1"
+  current_cal_val2_in: "100.0"
+  current_cal_val2_out: "100.1"
+  voltage_cal_val1_in: "125.0"
+  voltage_cal_val1_out: "125.01"
+  voltage_cal_val2_in: "126.0"
+  voltage_cal_val2_out: "126.01"
+
+  sub_default_scale_power: "100"
+  sub_default_scale_current: "100"
+  sub_default_scale_voltage: "100"
+
+  sub_update_interval: 10s
+
+packages:
+  platform: !include ../../common/platforms/bk7231t.yaml
+  core: !include ../../common/switch/core.yaml
+  led: !include ../../common/switch/led-modes.yaml
+  load: !include ../../common/switch/load-switch.yaml
+
+esphome:
+  project:
+    name: $project_name
+    version: $project_ver_num($project_ver_let)
+
+# https://esphome.io/components/esphome.html#adjusting-flash-writes
+preferences:
+  # setting interval to 5 minutes since this defines writing total daily energy to flash, which will occur
+  # every interval length 24/7/365.
+  flash_write_interval: 5min
+
+script:
+  # (original) flash writes happen every 5 min; things that must survive a power cut soon after a change call this
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+
+# the original saved 3 s after every relay change (script_set_power_leds) and every setting change (set_action)
+switch:
+  - id: !extend no_hass
+    on_turn_on:
+      - script.execute: script_save_changes
+    on_turn_off:
+      - script.execute: script_save_changes
+  - id: !extend main_switch
+    on_turn_on:
+      - script.execute: script_save_changes
+    on_turn_off:
+      - script.execute: script_save_changes
+
+select:
+  - id: !extend relay_config
+    on_value:
+      - script.execute: script_save_changes
+  - id: !extend select_bled
+    on_value:
+      - script.execute: script_save_changes
+
+output:
+  - {platform: gpio, id: relay_output, pin: '${relay_pin}'}
+  # pwm output for the LED so it can be dimmed (original: libretiny_pwm 200 Hz, inverted)
+  - {platform: libretiny_pwm, id: status_led_output, pin: '${status_led_pin}', frequency: 200 Hz, inverted: true}
+  - {platform: template, id: error_led_output, type: float, write_action: [lambda: return;]}   # no second LED
+
+
+# ---- power monitoring: original, line for line ------------------------------------------------------------------
+
+binary_sensor:
+  # indicates whether plugged-in device is running based on configurable threshold.
+  - platform: template
+    id: in_use
+    name: Device In Use
+    on_press:
+      - homeassistant.event:
+          event: esphome.plug_in_use
+          data:
+            devicename: ${room_key}
+            room: ${room_key}
+            name_friendly: ${friendly_name}
+            action: started
+    on_release:
+      - homeassistant.event:
+          event: esphome.plug_in_use
+          data:
+            devicename: ${room_key}
+            room: ${room_key}
+            name_friendly: ${friendly_name}
+            action: finished
+
+sensor:   # Power monitoring sensors output to Home Assistant
+  - platform: hlw8012
+    id: hlw_main
+    sel_pin:
+      number: $sub_pm_sel_pin
+      inverted: true
+    cf_pin:
+      number: $sub_pm_cf_pin
+      inverted: true
+    cf1_pin:
+      number: $sub_pm_cf1_pin
+      inverted: true
+    current_resistor: $current_resistor_val
+    voltage_divider: $voltage_divider_val
+    update_interval: $sub_update_interval
+    model: $sub_hlw_model
+
+    power:
+      name: Power
+      unit_of_measurement: W
+      id: wattage
+      filters:
+        - calibrate_linear:
+            - $power_cal_val1_in -> $power_cal_val1_out
+            - $power_cal_val2_in -> $power_cal_val2_out
+        - lambda: |-
+            // filter out extremely large values that are incorrect
+            float return_val = x * id(scale_power).state/100.0f;
+            if ( return_val > 5000.0f) return {};
+            else return return_val;
+
+    current:
+      name: Current
+      unit_of_measurement: A
+      id: current
+      filters:
+        - calibrate_linear:
+            - $current_cal_val1_in -> $current_cal_val1_out
+            - $current_cal_val2_in -> $current_cal_val2_out
+        - lambda: return x * id(scale_current).state/100.0f;
+
+    voltage:
+      name: Voltage
+      unit_of_measurement: V
+      id: voltage
+      filters:
+        - calibrate_linear:
+            - $voltage_cal_val1_in -> $voltage_cal_val1_out
+            - $voltage_cal_val2_in -> $voltage_cal_val2_out
+        - lambda: return x * id(scale_voltage).state/100.0f;
+
+  - platform: copy
+    source_id: wattage
+    name: Power Moving Average
+    disabled_by_default: $disable_entities
+    filters:
+      - sliding_window_moving_average:
+          window_size: 15
+          send_every: 15
+    on_value:   # set or clear in_use template binary sensor depending on whether power usage is over threshold
+      - lambda: id(in_use).publish_state(x >= id(threshold).state);
+
+  # Reports the total Power so-far each day, resets at midnight
+  - platform: total_daily_energy
+    name: Total Daily Energy
+    power_id: wattage
+    time_id: time_homeassistant   # the plug only had HA time; common/ also has SNTP
+    filters:
+      - multiply: 0.001  # convert Wh to kWh
+    unit_of_measurement: kWh
+
+number:
+  - id: !extend led_brightness       # LED Brightness (led-modes.yaml) saved quickly, as the original
+    set_action:
+      - script.execute: script_save_changes
+
+  # used as a threshold for whether the plugged-in devices is running.
+  - platform: template
+    name: Use Threshold
+    min_value: 1
+    max_value: 100
+    step: 1
+    initial_value: 15
+    id: threshold
+    set_action:
+      - script.execute: script_save_changes
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: Watt(s)
+    mode: box
+    disabled_by_default: $disable_entities
+    on_value:        # set or clear in_use template binary sensor depending on whether power usage is above threshold
+      - lambda: id(in_use).publish_state(id(wattage).state >= x);
+
+  - platform: template
+    name: Scale Power
+    min_value: 50
+    max_value: 200
+    step: .1
+    initial_value: $sub_default_scale_power
+    id: scale_power
+    set_action:
+      - script.execute: script_save_changes
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "%"
+    mode: box
+    disabled_by_default: $disable_entities
+    on_value:   # republish value. Sensor automation applies new scaling factor.
+      - lambda: id(wattage).publish_state(id(wattage).get_raw_state());
+
+  - platform: template
+    name: Scale Current
+    min_value: 50
+    max_value: 200
+    step: .1
+    initial_value: $sub_default_scale_current
+    id: scale_current
+    set_action:
+      - script.execute: script_save_changes
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "%"
+    mode: box
+    disabled_by_default: $disable_entities
+    on_value:   # republish value. Sensor automation applies new scaling factor.
+      - lambda: id(current).publish_state(id(current).get_raw_state());
+
+  - platform: template
+    name: Scale Voltage
+    min_value: 50
+    max_value: 200
+    step: .1
+    initial_value: $sub_default_scale_voltage
+    id: scale_voltage
+    set_action:
+      - script.execute: script_save_changes
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "%"
+    mode: box
+    disabled_by_default: $disable_entities
+    on_value:   # republish value. Sensor automation applies new scaling factor.
+      - lambda: id(voltage).publish_state(id(voltage).get_raw_state());

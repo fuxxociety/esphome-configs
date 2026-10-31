@@ -1,0 +1,31 @@
+# Base for every device. Included by common/platforms/<chip>.yaml, never directly.
+#
+# Required substitutions (set in the device file):
+#   name               hostname, <class>-<room>[-<type>][-<n>]   e.g. switch-kitchen
+#   friendly_name      shortest descriptive name; HA prefixes every entity with it   e.g. Kitchen
+# Optional:
+#   room_key           key HA uses to find this device's group/scripts/timers (BEHAVIOR.md §0); default: none
+#   device_description free text shown as the device comment
+#   disable_entities   'true' hides diagnostic entities by default
+substitutions:
+  room_key: ''
+  device_description: ''
+  disable_entities: 'true'
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  comment: ${device_description}
+  # power-on vs software-reboot detection (BEHAVIOR.md §0.5)
+  includes:
+    - common/boot/power.h
+
+packages:
+  api: !include api.yaml
+  ota: !include ota.yaml
+  wifi: !include wifi.yaml
+  logger: !include logger.yaml
+  time: !include time.yaml
+  diagnostics: !include diagnostics.yaml
+
+captive_portal:

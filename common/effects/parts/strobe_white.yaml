@@ -1,0 +1,5 @@
+strobe:
+  name: Strobe
+  colors:
+    - {state: true, brightness: 100%, duration: 50ms}
+    - {state: false, duration: 25ms}

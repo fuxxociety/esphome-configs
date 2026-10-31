@@ -1,0 +1,885 @@
+
+substitutions:
+  nameprefix: 'switch-3w-'
+  name: switch-3w-downstairs
+  device_description: 'Treatlife SS01S 3-Way Wall Switch'
+
+  project_name: Treatlife.SS01S-3w
+  project_ver_num: "1.2"
+
+  # MCU that powers this device
+  #esp_module_type: "ESP-01E"
+
+  # GPIO definitions
+  sub_red_led_pin:  GPIO19
+  sub_white_led_pin: GPIO18
+  sub_button_pin:   GPIO04 # could be 3, 4, or 5
+  sub_relay_pin:    GPIO03 # could be 3, 4, or 5
+
+  # debounce specifications
+  sub_default_debounce: "20"
+  sub_min_debounce:     "10"
+
+  sub_restore_mode: RESTORE_DEFAULT_OFF # overwrite to change boot up behavior of relay
+
+
+  # substitutions for button actions.  on_press and on_release implement a timer scheme with configurable delay.
+  # on_hold_30s re-enables the AP and captive portal for the precompiled update binary.
+  # any length of hold can be implemented with just on_press and on_release using the following directions.  This
+  # is basically how this yaml file works.
+  #   * have a delay for the desired hold in the on_press script
+  #   * stop the on_press script in the on_release script
+  #   * place actions in the on_press script after the delay to perform them while still holding the button
+  #   * place actions in the on_release script, with the condition that the on_press script is not running, to
+  #     perform them on release of the button.
+  sub_on_press:         script_do_nothing  # executes right when button is initially pressed
+  sub_on_release:       script_do_nothing  # executes right when button is released
+  sub_on_hold_30s:      script_force_ap    # executes right when button has been held for 5s, while button is still being held
+
+  sub_on_turn_on:       script_do_nothing
+  sub_on_turn_off:      script_do_nothing
+
+  # an extra script that, if running, will stop the relay from toggling on button release.
+  # used to not toggle when WiFi AP is re-enabled on update bin file.
+  sub_toggle_check: script_force_ap
+
+  # made this a substitution so that the update bin file and yaml compiled versions can have different defaults
+  default_button_config: "Toggle on Press"
+
+#module:
+#  esp: !include ../modules/ESP32-C3.yaml
+
+# https://esphome.io/components/esphome.html#adjusting-flash-writes
+preferences:
+  # setting interval to 5 minutes since this defines writing total daily energy to flash, which will occur
+  # every interval length 24/7/365.  Created a specific save script that is executed for things that need
+  # to save more quickly.
+  flash_write_interval: 5min
+
+esphome:
+  name: $name
+
+  project:
+    name: $project_name
+    version: $project_ver_num
+
+  on_boot:
+    then:
+        # implementing on_boot automation as a script makes it run in parallel
+        # with any other on_boot scripts.
+      - script.execute: script_set_power_leds
+      - script.execute: on_wifi_connect
+
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: ESP32C3
+  #restore_from_flash: true
+  framework:
+    type: esp-idf
+
+# https://esphome.io/components/external_components.html
+external_components:
+  - source:
+      type: git
+      url: https://github.com/KaufHA/common
+      ref: v2026.10.4
+    refresh: never
+
+# https://esphome.io/components/wifi.html
+wifi:
+  domain: !secret wifi_dns_domain
+  id: component_wifi
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  output_power: '17'
+  reboot_timeout: 5min
+  ap:
+    ssid: "${friendly_name} AP"
+    password: !secret ap_password
+    ap_timeout: 2147483647ms  # maximum 32 bit value.  About 3.5 weeks in milliseconds.
+#  forced_addr: 8
+#  global_addr: global_forced_addr
+
+captive_portal:
+
+logger:
+
+api:
+  reboot_timeout: '35min'
+  password: !secret esphome_api_password
+
+ota:
+  - platform: esphome
+    id: my_ota
+    password: !secret esphome_ota_password
+    on_error:
+      then:
+        - button.press: restart_button
+
+safe_mode:
+
+web_server:
+
+binary_sensor:
+#  - platform: gpio
+#    id: main_button
+#    name: $friendly_name Button
+#    pin:
+#      number: $sub_button_pin
+#      mode:
+#        input: true
+#        pullup: true
+#      inverted: true
+#    on_multi_click:
+#      # definition for single press
+#    - timing:
+#        - ON for at most $sub_hold_time
+#        - OFF for at least $sub_double_press_max_gap
+#      invalid_cooldown: 1000ms
+#      then:
+#        - lambda: |-
+#            id(script_toggle_modes).execute();
+#
+#      # definition for double press
+#    - timing:
+#        - ON for at most $sub_hold_time
+#        - OFF for at most $sub_double_press_max_gap
+#        - ON for at least 1ms
+#      then:
+#        - lambda: |-
+#            id(script_hass_toggle_double_press).execute();
+#
+#      # definition for quad press
+#    - timing:
+#        - ON for at most $sub_hold_time
+#        - OFF for at most $sub_double_press_max_gap
+#        - ON for at most $sub_hold_time
+#        - OFF for at most $sub_double_press_max_gap
+#        - ON for at most $sub_hold_time
+#        - OFF for at most $sub_double_press_max_gap
+#        - ON for at least 1ms
+#      then:
+#        - lambda: |-
+#            id(script_hass_toggle_quad_press).execute();
+#
+#      # definition for holding
+#    - timing:
+#        - ON for at least $sub_hold_time
+#      then:
+#        - lambda: |-
+#            id(script_hass_toggle_hold).execute();
+#
+#      # definition for release without hold (less than 30 seconds)
+#    - timing:
+#        - ON for at most $sub_hold_time
+#      then:
+#        - lambda: |-
+#            id(script_hass_toggle_release_without_hold).execute();
+#
+#      # definition for 30s hold
+#    - timing:
+#        - ON for at least 30s
+#      then:
+#      - logger.log: "------------------->>>>>>>>>>>>>>>>>   HELD BUTTON 30 SECONDS"
+
+    # button input toggles relay and thereby power led
+    # https://esphome.io/components/binary_sensor/gpio.html
+  - platform: gpio
+    id: button_in
+    name: $friendly_name Button
+    pin:
+      number: $sub_button_pin
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    on_press:
+      - lambda: |-
+          // store time of press and clear duration sensor
+          id(global_press_time) = millis();
+          id(sensor_press_duration).publish_state(0);
+
+          // toggle if configured for toggle on press
+          if (id(select_button).state == "Toggle on Press") {
+            id(relay).toggle(); }
+      - script.execute: $sub_on_press
+      - script.execute: script_30s_timer
+    on_release:
+      - lambda: |-
+          // set duration sensor
+          id(sensor_press_duration).publish_state(millis() - id(global_press_time) + id(number_debounce).state);
+
+          // toggle if configured on release and toggle check script is not running.
+          if (  (id(select_button).state == "Toggle on Release") && !id($sub_toggle_check).is_running() ) {
+            id(relay).toggle();
+          }
+      - script.execute: $sub_on_release
+      - script.stop: script_30s_timer
+    filters:
+      - delayed_on: !lambda return id(number_debounce).state;
+
+script:
+
+    # sets LEDs to proper state based on LED configuration and relay state
+  - id: script_set_power_leds
+    then:
+      - lambda: |-
+          // if blue led follows power status
+          if ( (id(select_wled).state == "Power Status") || (id(select_wled).state == "Error and Power") ) {
+            id(blue_led).publish_state(id(relay).state); }
+
+          // if blue led follows inverse of power status
+          else if ( (id(select_wled).state == "Invert Power Status") || (id(select_wled).state == "Error and Invert Power") ) {
+            id(blue_led).publish_state(!id(relay).state); }
+
+          // if red led follows power status
+          if ( (id(select_rled).state == "Power Status") || (id(select_rled).state == "Error and Power") ) {
+            id(red_led).publish_state(id(relay).state); }
+
+          // if red led follows inverse of power status
+          else if ( (id(select_rled).state == "Invert Power Status") || (id(select_rled).state == "Error and Invert Power") ) {
+            id(red_led).publish_state(!id(relay).state); }
+
+      - script.execute: script_save_changes
+
+  - id: blink_status_led
+    mode: queued
+    then:
+
+      - lambda: |-
+          // turn on blue LED if configured for error status
+          if ( (id(select_wled).state == "Error Status")  ||
+               (id(select_wled).state == "Error and Power") ||
+               (id(select_wled).state == "Error and Invert Power") ) {
+            id(blue_led).turn_on(); }
+
+          // turn on red LED if configured for error status
+          if ( (id(select_rled).state == "Error Status")  ||
+               (id(select_rled).state == "Error and Power") ||
+               (id(select_rled).state == "Error and Invert Power") ) {
+            id(red_led).turn_on(); }
+
+      - delay: 350ms
+
+      - lambda: |-
+          // turn off blue LED if configured for error status
+          if ( (id(select_wled).state == "Error Status")  ||
+               (id(select_wled).state == "Error and Power") ||
+               (id(select_wled).state == "Error and Invert Power") ) {
+            id(blue_led).turn_off(); }
+
+          // turn off red LED if configured for error status
+          if ( (id(select_rled).state == "Error Status")  ||
+               (id(select_rled).state == "Error and Power") ||
+               (id(select_rled).state == "Error and Invert Power") ) {
+            id(red_led).turn_off(); }
+
+      - delay: 1150ms
+
+      - if:
+          condition:
+            - lambda: return ( ( (App.get_app_state() & STATUS_LED_ERROR) != 0u) || ((App.get_app_state() & STATUS_LED_WARNING) != 0u) );
+          then:
+            - script.execute: blink_status_led      # repeat as long as error/warning exists
+          else:
+            - script.execute: script_set_power_leds # done with status LED, restore light power status
+
+  - id: script_setting_reboot
+    mode: restart          # only reboot plug settings are static for 10s.  Another change restarts timer.
+    then:
+      - lambda: ESP_LOGCONFIG("kauf-plug.yaml","Setting change requiring reboot detected, rebooting in 10 seconds to effect change.");
+      - delay: 10s
+      - button.press: restart_button
+
+  - id: script_30s_timer
+    then:
+      - delay: !lambda return (30000-id(number_debounce).state);
+      - script.execute: $sub_on_hold_30s
+
+  - id: on_wifi_connect
+    then:
+
+        # wait until wifi connects
+      - wait_until: wifi.connected
+
+      - lambda: |-
+          ESP_LOGD("KAUF on_boot","------------------->>>>>>>>>>>>>>>>>   wifi connected, cranking ap timeout back up");
+          wifi_wificomponent_id->set_ap_timeout(2147483647);
+
+  - id: script_force_ap
+    then:
+      - logger.log: "------------------->>>>>>>>>>>>>>>>>   HELD BUTTON 30 SECONDS, FORCING AP"
+
+      # overwrite software defined credentials to force ap to turn on.
+      - lambda: wifi::global_wifi_component->save_wifi_sta("initial_ap","asdfasdfasdfasdf");
+
+      # blink LED for 10s then restart to get captive portal to turn on.
+      - script.execute: blink_led
+      - delay: 10s
+      - button.press: restart_button
+
+    # blink LED forever.  Used when button is held to re-enable AP.  Stops blinking because plug restarts.
+  - id: blink_led
+    mode: queued
+    then:
+      - switch.toggle: blue_led
+      - delay: 333ms
+      - script.execute: blink_led
+
+  - id: script_do_nothing
+    then:
+      - lambda: return;
+
+#  - id: script_toggle_modes
+#    then:
+#      - logger.log: "Running script_toggle_modes.."
+#      - lambda: |-
+#          if ( id(select_relay).state == "Always On" ) {  /* Using Always-On mode */
+#            auto call = id(select_brightness).make_call();
+#            if ( !id(reset_delay).is_running() ) { /* if delay is expired */
+#              if ( id(ui_switch).state ) {        /* if ui_switch is on? */
+#                call.select_first();                /* turn bulbs off */
+#                id(reset_delay).execute();          /* start timer for next action */
+#              } else {                            /* if ui_switch is off? */
+#                call.set_option("bright");          /* max bright white */
+#              }
+#            } else {                              /* if delay script _IS_ running */
+#              call.select_next(true);               /* pick next select option */
+#              id(reset_delay).execute();
+#            }
+#            call.perform();                       /* apply the action */
+#            if ( id(select_brightness).state != "off" ) { /* Handle ui_switch state in Always-On mode */
+#              id(ui_switch).turn_on();
+#            } else {
+#              id(ui_switch).turn_off();
+#            }
+#          } else {                                /* Not using Always-On mode */
+#            id(ui_switch).toggle();
+#          }
+#          id(script_hass_toggle_single_press).execute();
+#  - id: script_hass_toggle_single_press
+#    then:
+#      - script.execute: single_press_event
+#      - homeassistant.event:
+#          event: esphome.single
+#          data:
+#            devicename: ${system_name}
+#            name_friendly: ${friendly_name}
+#            action: single_press
+#            mode: !lambda return id(select_relay).state;
+#            effect: !lambda return id(select_brightness).state;
+#      - script.execute: reset_delay
+#  - id: script_hass_toggle_double_press
+#    then:
+#      homeassistant.event:
+#        event: esphome.double
+#        data:
+#          devicename: ${system_name}
+#          name_friendly: ${friendly_name}
+#          action: double_press
+#  - id: script_hass_toggle_quad_press
+#    then:
+#      homeassistant.event:
+#        event: esphome.quad
+#        data:
+#          devicename: ${system_name}
+#          name_friendly: ${friendly_name}
+#          action: quad_press
+#  - id: script_hass_toggle_hold
+#    then:
+#      homeassistant.event:
+#        event: esphome.hold
+#        data:
+#          devicename: ${system_name}
+#          name_friendly: ${friendly_name}
+#          action: hold
+#  - id: script_hass_toggle_release_without_hold
+#    then:
+#      homeassistant.event:
+#        event: esphome.release_without_hold
+#        data:
+#          devicename: ${system_name}
+#          name_friendly: ${friendly_name}
+#          action: release_without_hold
+
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+  - id: reset_delay
+    mode: restart
+    then:
+      - delay: 8s
+      - logger.log: "select_brightness has expired!"
+
+# pwm outputs for LEDs so they can be dimmed
+# https://esphome.io/components/output/esp8266_pwm.html
+output:
+    # red light pwm
+  - platform: ledc
+    pin: $sub_red_led_pin
+    frequency: 250 Hz
+    id: red_led_pwm
+    inverted: true
+    # white light pwm
+  - platform: ledc
+    pin: $sub_white_led_pin
+    frequency: 250 Hz
+    id: white_led_pwm
+    min_power: 10%
+    inverted: true
+
+#  - platform: ledc
+#    id: white_led_pwm
+#    frequency: 200 Hz
+#    pin: $sub_white_led_pin
+#    inverted: true
+#  - platform: ledc
+#    id: red_led_pwm
+#    frequency: 200 Hz
+#    pin: $sub_red_led_pin
+#    inverted: true
+
+# Send IP Address to HA
+# https://esphome.io/components/text_sensor/wifi_info.html
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: $friendly_name IP Address
+      disabled_by_default: $disable_entities
+  - platform: homeassistant
+    id: stairs_3w_select_brightness
+    name: Stairs 3-Way Brightness
+    entity_id: input_select.stairs_3w_select_brightness
+    internal: false
+    on_value:
+      then:
+        - lambda: |-
+            id(script_toggle_modes).execute();
+
+switch:
+  # relay output
+  - platform: gpio
+    id: relay
+    name: $friendly_name
+    pin: $sub_relay_pin
+    entity_category: ''
+#    forced_hash: 41191675
+#    forced_addr: 2
+#    global_addr: global_forced_addr
+    restore_mode: $sub_restore_mode
+    on_turn_on:
+      - logger.log: "Relay turned on!"
+      - script.execute: script_set_power_leds
+      - script.execute: $sub_on_turn_on
+    on_turn_off:
+      - logger.log: "Relay turned off!"
+      - script.execute: script_set_power_leds
+      - script.execute: $sub_on_turn_off
+
+    # https://esphome.io/components/switch/template.html
+  - platform: template
+    id: switch_no_hass
+    name: $friendly_name No HASS
+    optimistic: true
+    entity_category: config
+    disabled_by_default: $disable_entities
+    icon: mdi:toggle-switch-off-outline
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_on:
+      - lambda: |-
+          id(kauf_api).set_reboot_timeout(0);  // 0 disables auto rebooting and also new status led blinking.  doesn't stop current status led blinking
+          id(kauf_api).status_clear_warning(); // stops current status led blinking, timeout 0 keeps it from restarting
+      - script.execute: script_save_changes
+    on_turn_off:
+      - lambda: id(kauf_api).set_reboot_timeout(900000);
+      - script.execute: script_save_changes
+#    forced_hash: 657159011
+#    forced_addr: 42
+#    global_addr: global_forced_addr
+
+  - platform: template
+    id: white_led
+    name: $friendly_name White LED
+    optimistic: true
+    entity_category: config
+    disabled_by_default: $disable_entities
+    icon: mdi:led-outline
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: id(white_led_pwm).set_level(id(white_led_brightness).state/100);
+    on_turn_off:
+      - lambda: id(white_led_pwm).set_level(0.0);
+#    forced_hash: 1329407616
+#    forced_addr: 44
+#    global_addr: global_forced_addr
+
+  - platform: template
+    id: red_led
+    name: $friendly_name Red LED
+    optimistic: true
+    entity_category: config
+    disabled_by_default: $disable_entities
+    icon: mdi:led-outline
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: id(red_led_pwm).set_level(id(red_led_brightness).state/100);
+    on_turn_off:
+      - lambda: id(red_led_pwm).set_level(0.0);
+#    forced_hash: 261191305
+#    forced_addr: 48
+#    global_addr: global_forced_addr
+
+  - platform: template
+    name: "${friendly_name} Switch"
+    id: ui_switch
+    restore_mode: RESTORE_DEFAULT_OFF
+    optimistic: false
+    lambda: |-
+      // UI switch should check that the circuit has power in 'dumb' state, or
+      // if in 'smart' state should be triggered by select_brightness setting
+      // waiting for select entity to have a state keeps the relay from toggling during boot
+      if ( id(power_sensor).has_state() && id(power_sensor).state ) {
+        return true;
+      } else {
+        return false;
+      }
+    turn_on_action:
+    - if:
+        condition:
+          - binary_sensor.is_off: power_sensor
+        then:
+          - lambda: |-
+              id(relay).turn_on();
+              // (indicator) switch is on, copy on values
+              auto call = id(white_led).make_call();
+              call.set_state(true);
+              call.set_brightness(1.0);
+              call.perform();
+          - script.execute: script_save_changes
+    turn_off_action:
+    - if:
+        condition:
+          - binary_sensor.is_on: power_sensor
+        then:
+          - logger.log: "Template Switch turned off with power_sensor on"
+          - lambda: |-
+              id(relay).turn_off();
+              // (indicator) switch is off, copy off values
+              auto call = id(white_led).make_call();
+              call.set_state(false);
+              call.perform();
+          - script.execute: script_save_changes
+
+button:
+# https://esphome.io/components/button/index.html
+# https://esphome.io/components/button/restart.html
+  - platform: restart
+    id: restart_button
+    name: $friendly_name Restart Firmware
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+
+  - platform: template
+    id: test1
+    name: $friendly_name Single Click
+    disabled_by_default: true
+    on_press:
+      then:
+        - lambda: |-
+            id(script_toggle_modes).execute();
+
+
+# clock input from Home Assistant
+# https://esphome.io/components/time.html#home-assistant-time-source
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+sensor:
+    # https://esphome.io/components/sensor/uptime.html
+  - platform: uptime
+    name: $friendly_name Uptime
+    update_interval: 60s
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+
+    # https://esphome.io/components/sensor/template.html
+  - platform: template
+    name: $friendly_name Button Press Duration
+    id: sensor_press_duration
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+    unit_of_measurement: ms
+    icon: mdi:timer-outline
+
+    # https://esphome.io/components/sensor/template.html
+  - platform: template
+    name: $friendly_name Button Press Duration
+    id: sensor_press_duration
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+    unit_of_measurement: ms
+    icon: mdi:timer-outline
+
+number:      # used as a threshold for whether the plugged-in devices is running.
+  - platform: template
+    name: $friendly_name Use Threshold
+    min_value: 1
+    max_value: 100
+    step: 1
+    initial_value: 3
+    id: threshold
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: Watt(s)
+    mode: box
+    disabled_by_default: $disable_entities
+#    forced_hash: 3932521563
+#    forced_addr: 4
+#    global_addr: global_forced_addr
+    set_action:
+      - script.execute: script_save_changes
+#    on_value:        # set or clear in_use template binary sensor depending on whether power usage is above threshold
+#      - lambda: id(in_use).publish_state(id(wattage).state >= x);
+
+  - platform: template
+    name: $friendly_name White LED Brightness
+    min_value: 1
+    max_value: 100
+    step: 1
+    initial_value: 75
+    id: white_led_brightness
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "%"
+    mode: slider
+    icon: mdi:brightness-percent
+    set_action:
+      - script.execute: script_save_changes
+    on_value:
+      - lambda: if ( id(white_led).state ) id(white_led_pwm).set_level(x/100);
+#    forced_hash: 2635887862
+#    forced_addr: 46
+#    global_addr: global_forced_addr
+
+  - platform: template
+    name: $friendly_name Red LED Brightness
+    min_value: 1
+    max_value: 100
+    step: 1
+    initial_value: 75
+    id: red_led_brightness
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "%"
+    mode: slider
+    icon: mdi:brightness-percent
+    set_action:
+      - script.execute: script_save_changes
+    on_value:
+      - lambda: if ( id(red_led).state ) id(red_led_pwm).set_level(x/100);
+#    forced_hash: 4192312897
+#    forced_addr: 50
+#    global_addr: global_forced_addr
+
+  - platform: template
+    name: $friendly_name Debounce Time
+    min_value: $sub_min_debounce
+    max_value: 2000
+    step: 1
+    initial_value: $sub_default_debounce
+    id: number_debounce
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "ms"
+    mode: box
+    disabled_by_default: $disable_entities
+#    forced_hash: 2232959069
+#    forced_addr: 40
+#    global_addr: global_forced_addr
+
+#light:
+#  - platform: monochromatic
+#    name: $friendly_name Error LED
+#    id: red_led
+#    output: pwm1_red
+#    default_transition_length: 333ms
+#    disabled_by_default: true
+
+#  - platform: monochromatic
+#    name: $friendly_name Status LED
+#    id: white_led
+#    output: pwm2_white
+#    default_transition_length: 333ms
+#    disabled_by_default: true
+
+# https://esphome.io/components/select/index.html
+# https://esphome.io/components/select/template.html
+select:
+
+  - platform: template
+    name: $friendly_name Button Config
+    id: select_button
+    optimistic: true
+    options:
+      - Toggle on Press
+      - Toggle on Release
+      - Don't Toggle
+    initial_option: $default_button_config
+    restore_value: true
+    icon: mdi:circle-double
+    entity_category: config
+#    forced_hash: 3616613943
+#    forced_addr: 34
+#    global_addr: global_forced_addr
+    set_action:
+      - script.execute: script_save_changes
+
+  - platform: template
+    name: $friendly_name White LED Config
+    id: select_wled
+    optimistic: true
+    entity_category: config
+    options:
+      - Power Status
+      - No Automation
+      - Invert Power Status
+      - Error Status
+      - Error and Power
+      - Error and Invert Power
+    initial_option: Power Status
+    restore_value: true
+    icon: mdi:led-on
+#    forced_hash: 3104663617
+#    forced_addr: 36
+#    global_addr: global_forced_addr
+    set_action:
+      - script.execute: script_save_changes
+    on_value:
+      - if:
+          condition:
+            - lambda: return ( x == "Error Status" );
+          then:
+            - switch.turn_off: white_led
+      - script.execute: script_set_power_leds
+
+  - platform: template
+    name: $friendly_name Red LED Config
+    id: select_rled
+    optimistic: true
+    entity_category: config
+    options:
+      - Power Status
+      - No Automation
+      - Invert Power Status
+      - Error Status
+      - Error and Power
+      - Error and Invert Power
+    initial_option: Error Status
+    restore_value: true
+    icon: mdi:led-on
+#    forced_hash: 261191305
+#    forced_addr: 38
+#    global_addr: global_forced_addr
+    set_action:
+      - script.execute: script_save_changes
+    on_value:
+      - if:
+          condition:
+            - lambda: return ( x == "Error Status" );
+          then:
+            - switch.turn_off: red_led
+      - script.execute: script_set_power_leds
+
+  - platform: template
+    name: $friendly_name Boot State
+    id: select_boot_state
+    optimistic: true
+    options:
+      - "Restore Power Off State"
+      - "Invert Power Off State"
+      - "Always On"
+      - "Always Off"
+      - "YAML Configured ($sub_restore_mode)"
+    initial_option: "Restore Power Off State"
+    restore_value: true
+    icon: mdi:restart-alert
+    entity_category: config
+#    forced_hash: 2390278151
+#    forced_addr: 74
+#    global_addr: global_forced_addr
+    on_value:
+      - lambda: |-
+          if ( x == "Restore Power Off State")
+            relay->set_restore_mode(SWITCH_RESTORE_DEFAULT_OFF);
+          else if ( x == "Invert Power Off State")
+            relay->set_restore_mode(SWITCH_RESTORE_INVERTED_DEFAULT_OFF);
+          else if ( x == "Always On")
+            relay->set_restore_mode(SWITCH_ALWAYS_ON);
+          else if ( x == "Always Off")
+            relay->set_restore_mode(SWITCH_ALWAYS_OFF);
+          else
+            relay->set_restore_mode(SWITCH_$sub_restore_mode);
+
+          // republish state so it gets saved if necessary
+          // but make sure relay already set up, don't want to publish here on boot
+          if ( id(relay).is_setup() ) id(relay).publish_state(id(relay).state, true);
+
+      - script.execute: script_save_changes
+
+#  - platform: template
+#    name: ${system_name}${namesuffix} Relay Config
+#    id: select_relay
+#    optimistic: true
+#    options:
+#      - Switched
+#      - Always On
+#      - Always Off
+#    initial_option: Switched
+#    restore_value: true
+#    entity_category: config
+#    icon: mdi:progress-question
+#    on_value:
+#      then:
+#        - lambda: |-
+#            if      ( x == "Always On"  )   { id(relay).turn_on();  }
+#            else if ( x == "Always Off" )   { id(relay).turn_off(); }
+#            else if ( id(ui_switch).state ) { id(relay).turn_on();  }
+#            else      /* ui_switch off */   { id(relay).turn_off(); }
+#        - script.execute: script_save_changes
+
+#  - platform: template
+#    name: ${system_name}${namesuffix} brightness
+#    id: select_brightness
+#    optimistic: true
+#    options:
+#      - "off"
+#      - "bright"
+#      - "medium"
+#      - "low"
+#      - "night"
+#    initial_option: "off"
+#    restore_value: false
+#    icon: mdi:restart-alert
+#    on_value:
+#      - script.execute: reset_delay
+#      - script.execute: script_hass_toggle_single_press
+#    entity_category: config
+
+# emulate status_led
+# https://esphome.io/guides/automations.html#interval-component
+interval:
+  - interval: 5s
+    then:
+    - lambda: |-
+        if ( ( ((App.get_app_state() & STATUS_LED_ERROR  ) != 0u) ||
+               ((App.get_app_state() & STATUS_LED_WARNING) != 0u) )
+            && !id(blink_status_led).is_running() )
+          id(blink_status_led).execute();
+

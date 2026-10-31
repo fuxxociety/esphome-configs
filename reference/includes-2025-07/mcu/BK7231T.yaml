@@ -1,0 +1,25 @@
+---
+# Tuya WB8P chip contains a Beken BK7231T MCU
+# https://developer.tuya.com/en/docs/iot/wb8p-module-datasheet?id=K9fwx4f89tvzd
+substitutions:
+  disable_entities: 'true'
+  wifi_tx_power: 17dB
+  pwm_platform: libretiny_pwm
+
+
+bk72xx:
+  board: generic-bk7231t-qfn32-tuya
+
+
+packages:
+  pkg_esphome: !include components/esphome.yaml
+  pkg_logger: !include components/logger.yaml
+  pkg_api: !include components/api.yaml
+  pkg_ota: !include components/ota.yaml
+  pkg_wifi: !include components/wifi.yaml
+  pkg_captive: !include components/captive_portal.yaml
+  pkg_restart: !include components/restart_button.yaml
+  pkg_status: !include components/status_binary_sensor.yaml
+  pkg_time: !include components/time.yaml
+  pkg_web: !include components/web_server.yaml
+  pkg_ver: !include components/version_text_sensor.yaml

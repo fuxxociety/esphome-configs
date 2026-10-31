@@ -1,0 +1,329 @@
+# Treatlife SS01S single-pole wall switch (ESP-12F, 4MB)
+#
+# Rebuilt for ESPHome 2026.x from treatlife-ss01s-events.old.yaml, which matches the
+# firmware these switches actually run (verified against the live entity list of
+# switch-masterbath-vanity). The previous version of this file was a paste of the
+# Kauf RGB switch yaml and drove the relay on GPIO15; the SS01S relay is GPIO12.
+#
+# Pinout:  GPIO13 button (active low) | GPIO12 relay | GPIO4 white LED (inv) | GPIO5 red LED (inv)
+#
+# Use as a package from a device file that sets system_name + friendly_name:
+#   packages:
+#     sw: !include devices/treatlife-ss01s-events.yaml
+# Device name = switch-${system_name}
+
+substitutions:
+  nameprefix: 'switch-'
+  device_description: 'Treatlife SS01S Single-Pole Wall Switch'
+  appliance_name: Treatlife.SS01S
+  appliance_model: "ESP-12F"
+
+  sub_double_press_max_gap: 333ms
+  sub_hold_time: 750ms
+  sub_button_sensor_duration: 500ms
+
+packages:
+  esp: !include ../modules/ESP8266.yaml
+
+esp8266:
+  restore_from_flash: true
+  early_pin_init: false
+
+esphome:
+  project:
+    name: $appliance_name
+    version: $appliance_model
+
+ota:
+  # my_ota (password) comes from modules/components/common/ota.yaml
+  - id: !extend my_ota
+    on_error:
+      then:
+        - button.press: restart_button
+
+button:
+  - platform: template
+    id: test1
+    name: $friendly_name Single Click
+    disabled_by_default: true
+    on_press:
+      then:
+        - script.execute: script_toggle_modes
+
+  - platform: template
+    id: test2
+    name: $friendly_name Quad Click
+    disabled_by_default: true
+    on_press:
+      then:
+        - script.execute: script_event_quad_press
+
+binary_sensor:
+  - platform: gpio
+    id: main_button
+    name: $friendly_name Button
+    pin:
+      number: GPIO13
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    on_multi_click:
+      # single press
+      - timing:
+          - ON for at most $sub_hold_time
+          - OFF for at least $sub_double_press_max_gap
+        invalid_cooldown: 1000ms
+        then:
+          - script.execute: script_toggle_modes
+      # double press
+      - timing:
+          - ON for at most $sub_hold_time
+          - OFF for at most $sub_double_press_max_gap
+          - ON for at least 1ms
+        then:
+          - script.execute: script_event_double_press
+      # quad press
+      - timing:
+          - ON for at most $sub_hold_time
+          - OFF for at most $sub_double_press_max_gap
+          - ON for at most $sub_hold_time
+          - OFF for at most $sub_double_press_max_gap
+          - ON for at most $sub_hold_time
+          - OFF for at most $sub_double_press_max_gap
+          - ON for at least 1ms
+        then:
+          - script.execute: script_event_quad_press
+      # hold
+      - timing:
+          - ON for at least $sub_hold_time
+        then:
+          - script.execute: script_event_press_and_hold
+      # release without hold
+      - timing:
+          - ON for at most $sub_hold_time
+        then:
+          - script.execute: script_event_release_without_hold
+      - timing:
+          - ON for at least 30s
+        then:
+          - logger.log: "------------------->>>>>>>>>>>>>>>>>   HELD BUTTON 30 SECONDS"
+
+switch:
+  - platform: template
+    name: ${system_name}${namesuffix}
+    id: ui_switch
+    restore_mode: RESTORE_DEFAULT_OFF
+    optimistic: true
+    on_turn_on:
+      then:
+        - light.turn_on: remap_light
+        - light.turn_on:
+            id: white_led
+            brightness: 100%
+        - script.execute: script_event_switch_on
+        - script.execute: script_save_changes
+    on_turn_off:
+      then:
+        - light.turn_off: remap_light
+        - script.execute: script_event_switch_off
+        - script.execute: script_save_changes
+
+output:
+  - platform: gpio
+    id: relay
+    pin: GPIO12
+  - platform: esp8266_pwm
+    pin: GPIO5
+    frequency: 250 Hz
+    id: pwm1_red
+    inverted: true
+  - platform: esp8266_pwm
+    pin: GPIO4
+    frequency: 250 Hz
+    id: pwm2_white
+    min_power: 10%
+    inverted: true
+
+light:
+  # relay, driven by ui_switch / select_relay; not exposed (the switch is the HA entity)
+  - platform: binary
+    id: remap_light
+    name: ${system_name}${namesuffix} Relay
+    internal: true
+    output: relay
+  - platform: monochromatic
+    name: $friendly_name Error LED
+    id: red_led
+    output: pwm1_red
+    default_transition_length: 333ms
+    disabled_by_default: true
+  - platform: monochromatic
+    name: $friendly_name Status LED
+    id: white_led
+    output: pwm2_white
+    default_transition_length: 333ms
+    disabled_by_default: true
+
+select:
+  - platform: template
+    name: ${system_name}${namesuffix} Relay Config
+    id: select_relay
+    optimistic: true
+    options:
+      - Switched
+      - Always On
+      - Always Off
+    initial_option: Switched
+    restore_value: true
+    entity_category: config
+    icon: mdi:progress-question
+    on_value:
+      then:
+        - lambda: |-
+            if      ( x == "Always On"  )   { id(remap_light).turn_on().perform();  }
+            else if ( x == "Always Off" )   { id(remap_light).turn_off().perform(); }
+            else if ( id(ui_switch).state ) { id(remap_light).turn_on().perform();  }
+            else      /* ui_switch off */   { id(remap_light).turn_off().perform(); }
+        - script.execute: script_save_changes
+
+  - platform: template
+    name: ${system_name}${namesuffix} brightness
+    id: select_brightness
+    optimistic: true
+    options:
+      - "off"
+      - "bright"
+      - "medium"
+      - "low"
+      - "night"
+    initial_option: "off"
+    restore_value: false
+    icon: mdi:restart-alert
+    entity_category: config
+    on_value:
+      - script.execute: reset_delay
+      - script.execute: script_event_single_press
+
+# Uptime sensor comes from modules/components/common/uptime.yaml
+
+script:
+  - id: script_toggle_modes
+    then:
+      - lambda: |-
+          auto call = id(select_brightness).make_call();
+          if ( id(select_relay).current_option() == "Always On" ) {
+            if ( !id(reset_delay).is_running() ) {        /* delay expired */
+              if ( id(ui_switch).state ) {
+                call.select_first();                      /* bulbs off */
+                id(reset_delay).execute();
+              } else {
+                call.set_option("bright");                /* max bright white */
+              }
+            } else {                                      /* within delay: cycle */
+              call.select_next(true);
+              id(reset_delay).execute();
+            }
+            call.perform();
+            if ( id(select_brightness).current_option() == "off" ) {
+              id(ui_switch).turn_off();
+            } else {
+              id(ui_switch).turn_on();
+            }
+          } else {                                        /* "Always Off" or "Switched" */
+            if ( id(ui_switch).state ) {
+              call.select_first();
+              id(ui_switch).turn_off();
+            } else {
+              call.set_option("bright");
+              id(ui_switch).turn_on();
+            }
+            call.perform();
+          }
+
+  - id: script_event_switch_on
+    then:
+      - homeassistant.event:
+          event: esphome.switch
+          data:
+            devicename: ${system_name}
+            name_friendly: ${friendly_name}
+            action: switch_on
+            mode: !lambda return id(select_relay).current_option();
+
+  - id: script_event_switch_off
+    then:
+      - homeassistant.event:
+          event: esphome.switch
+          data:
+            devicename: ${system_name}
+            name_friendly: ${friendly_name}
+            action: switch_off
+            mode: !lambda return id(select_relay).current_option();
+
+  - id: script_event_single_press
+    then:
+      - homeassistant.event:
+          event: esphome.single
+          data:
+            devicename: ${system_name}
+            name_friendly: ${friendly_name}
+            action: single_press
+            mode: !lambda return id(select_relay).current_option();
+            brightness: !lambda return id(select_brightness).current_option();
+      - script.execute: reset_delay
+
+  - id: script_event_double_press
+    then:
+      - homeassistant.event:
+          event: esphome.double
+          data:
+            devicename: ${system_name}
+            name_friendly: ${friendly_name}
+            action: double_press
+
+  - id: script_event_quad_press
+    then:
+      - lambda: |-
+          // toggle between Switched and Always On (smart-bulb mode)
+          if ( id(select_relay).has_state() ) {
+            auto call = id(select_relay).make_call();
+            call.set_option( id(select_relay).current_option() != "Switched" ? "Switched" : "Always On" );
+            call.perform();
+          }
+      - homeassistant.event:
+          event: esphome.quad
+          data:
+            devicename: ${system_name}
+            name_friendly: ${friendly_name}
+            action: quad_press
+
+  - id: script_event_press_and_hold
+    then:
+      - homeassistant.event:
+          event: esphome.hold
+          data:
+            devicename: ${system_name}
+            name_friendly: ${friendly_name}
+            action: hold
+
+  - id: script_event_release_without_hold
+    then:
+      - homeassistant.event:
+          event: esphome.release_without_hold
+          data:
+            devicename: ${system_name}
+            name_friendly: ${friendly_name}
+            action: release_without_hold
+
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+
+  - id: reset_delay
+    mode: restart
+    then:
+      - delay: 8s
+      - logger.log: "select_brightness has expired!"

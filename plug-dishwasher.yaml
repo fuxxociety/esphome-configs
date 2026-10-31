@@ -1,0 +1,7 @@
+substitutions:
+  name: plug-dishwasher
+  friendly_name: Dishwasher
+  room_key: dishwasher
+
+packages:
+  device: !include templates/minoston/mp22wp.yaml

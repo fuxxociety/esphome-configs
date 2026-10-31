@@ -1,0 +1,4 @@
+---
+then:
+  - light.turn_off: indicator
+  - <<: !include { file: onoffconditions.yaml, vars: { onoff: 'off' } }

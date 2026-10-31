@@ -1,0 +1,102 @@
+# LED policy for common/switch/core.yaml used by the Minoston appliance plugs: the hand-tuned Kauf-style LED modes
+# (ported from devices/Minoston-Smartplug-MP22WP.yaml, git tag baseline-2026.10). One LED (the status LED) and:
+#   LED Config:   Power Status | No Automation | Invert Power Status | Error Status | Error and Power | Error and Invert Power
+#   LED Brightness 1–100 % (default 75)
+# "Power" follows the load (= the relay in Switched mode). "Error" blinks 350 ms on / 1150 ms off while the API or
+# Wi-Fi is in trouble, then the power state is restored. With "No Automation" the LED is left as set from HA.
+select:
+  - platform: template
+    id: select_bled
+    name: LED Config
+    icon: mdi:led-on
+    entity_category: config
+    options:
+      - Power Status
+      - No Automation
+      - Invert Power Status
+      - Error Status
+      - Error and Power
+      - Error and Invert Power
+    initial_option: Power Status
+    optimistic: true
+    restore_value: true
+    on_value:
+      - if:
+          condition:
+            - lambda: return ( x == "Error Status" );
+          then:
+            - light.turn_off: {id: status_led, transition_length: 0s}
+      - script.execute: copy_vals
+
+number:
+  - platform: template
+    id: led_brightness
+    name: LED Brightness
+    icon: mdi:brightness-percent
+    entity_category: config
+    unit_of_measurement: "%"
+    mode: slider
+    min_value: 1
+    max_value: 100
+    step: 1
+    initial_value: 75
+    optimistic: true
+    restore_value: true
+    on_value:
+      - script.execute: copy_vals
+
+interval:
+  # emulate status_led (as the original): start the error blink while an error/warning exists
+  - interval: 5s
+    then:
+      - lambda: |-
+          if ( ( ((App.get_app_state() & STATUS_LED_ERROR  ) != 0u) ||
+                 ((App.get_app_state() & STATUS_LED_WARNING) != 0u) )
+              && !id(blink_status_led).is_running() )
+            id(blink_status_led).execute();
+
+script:
+  # LED to the configured state for the load (was script_set_power_leds)
+  - id: copy_vals
+    mode: restart
+    then:
+      - lambda: |-
+          if (id(main_button).state) return;   // hold feedback owns the LED while the button is down
+          const auto mode = id(select_bled).current_option();
+          bool on;
+          if ( (mode == "Power Status") || (mode == "Error and Power") ) on = id(load_on);
+          else if ( (mode == "Invert Power Status") || (mode == "Error and Invert Power") ) on = !id(load_on);
+          else return;                           // No Automation / Error Status: leave the LED alone
+          auto call = on ? id(status_led).turn_on() : id(status_led).turn_off();
+          if (on) call.set_brightness(id(led_brightness).state / 100.0f);
+          call.set_transition_length(0);
+          call.perform();
+
+  - id: led_restore
+    then:
+      - script.execute: copy_vals
+
+  - id: blink_status_led
+    mode: queued
+    then:
+      - lambda: |-
+          const auto mode = id(select_bled).current_option();
+          if ( (mode == "Error Status") || (mode == "Error and Power") || (mode == "Error and Invert Power") ) {
+            auto call = id(status_led).turn_on();
+            call.set_brightness(id(led_brightness).state / 100.0f);
+            call.set_transition_length(0);
+            call.perform();
+          }
+      - delay: 350ms
+      - lambda: |-
+          const auto mode = id(select_bled).current_option();
+          if ( (mode == "Error Status") || (mode == "Error and Power") || (mode == "Error and Invert Power") )
+            id(status_led).turn_off().set_transition_length(0).perform();
+      - delay: 1150ms
+      - if:
+          condition:
+            - lambda: return ( ( (App.get_app_state() & STATUS_LED_ERROR) != 0u) || ((App.get_app_state() & STATUS_LED_WARNING) != 0u) );
+          then:
+            - script.execute: blink_status_led   # repeat as long as error/warning exists
+          else:
+            - script.execute: copy_vals          # done with status LED, restore power status

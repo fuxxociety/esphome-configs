@@ -1,0 +1,12 @@
+# https://esphome.io/components/time/
+# HA time when connected, SNTP as fallback (devices keep working while HA is down).
+substitutions:
+  time_timezone: America/Chicago
+
+time:
+  - platform: homeassistant
+    id: time_homeassistant
+    timezone: ${time_timezone}
+  - platform: sntp
+    id: time_sntp
+    timezone: ${time_timezone}

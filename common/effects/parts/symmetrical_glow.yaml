@@ -1,0 +1,13 @@
+addressable_lambda:
+  name: Symmetrical Glow
+  update_interval: 40ms
+  lambda: |-
+    static int frame = 0;
+    const int half = it.size() / 2;
+    frame++;
+    for (int i = 0; i < half; i++) {
+      const float scale = fabsf(sinf((frame + i) * 0.1f));
+      const Color c(current_color.red * scale, current_color.green * scale, current_color.blue * scale);
+      it[i] = c;
+      it[it.size() - 1 - i] = c;
+    }

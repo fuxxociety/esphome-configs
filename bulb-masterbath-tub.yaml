@@ -1,0 +1,10 @@
+substitutions:
+  name: bulb-masterbath-tub
+  friendly_name: Master Bath Tub
+  room_key: masterbath_shower   # powered by the master bath shower switch, with the shower fixture
+
+packages:
+  device: !include templates/kauf/rgbww-bulb.yaml
+
+wifi:
+  use_address: 10.10.32.93   # as masterbath-tub.yaml (until DNS knows the new hostname)

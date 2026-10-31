@@ -1,0 +1,76 @@
+api:
+  services:
+    - service: variable_brightness
+      variables:
+        brightness: string
+      then:
+        - logger.log: "Received brightness command"
+        - if:
+            condition:
+              lambda: 'return brightness == "bright";'
+            then:
+              - script.execute: effect_bright
+        - if:
+            condition:
+              lambda: 'return brightness == "medium";'
+            then:
+              - script.execute: effect_medium
+        - if:
+            condition:
+              lambda: 'return brightness == "low";'
+            then:
+              - script.execute: effect_low
+        - if:
+            condition:
+              lambda: 'return brightness == "night";'
+            then:
+              - script.execute: effect_night
+        - if:
+            condition:
+              lambda: 'return brightness == "off";'
+            then:
+              - script.execute: effect_off
+
+script:
+  - id: effect_bright
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          warm_white: 100%
+          cold_white: 100%
+          # red: 100%
+          # green: 100%
+          # blue: 100
+  - id: effect_medium
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 60%
+          warm_white: 100%
+          cold_white: 100%
+          # red: 100%
+          # green: 100%
+          # blue: 100
+  - id: effect_low
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 30%
+          warm_white: 100%
+          cold_white: 100%
+          # red: 100%
+          # green: 100%
+          # blue: 100
+  - id: effect_night
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 30%
+          red: 100%
+          green: 55%
+          blue: 55%
+  - id: effect_off
+    then:
+      - light.turn_off:
+          id: ${bulb_id}

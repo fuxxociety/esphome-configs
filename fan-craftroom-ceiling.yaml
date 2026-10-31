@@ -1,0 +1,7 @@
+substitutions:
+  name: fan-craftroom-ceiling
+  friendly_name: Craft Room Ceiling
+  room_key: craftroom_ceiling
+
+packages:
+  device: !include templates/treatlife/ds01c-fan.yaml

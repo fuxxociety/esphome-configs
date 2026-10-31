@@ -1,0 +1,7 @@
+substitutions:
+  name: fan-upbath-vent
+  friendly_name: Upstairs Bath Vent
+  room_key: upbath_vent
+
+packages:
+  device: !include templates/treatlife/ss01s-fan.yaml

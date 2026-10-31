@@ -1,0 +1,11 @@
+# https://esphome.io/components/api.html
+# Shared encryption key; after the first flash HA asks for it once (Reconfigure).
+# Switches override api_reboot_timeout to 0s: they must never reboot just because HA is away (BEHAVIOR.md §0.5).
+substitutions:
+  api_reboot_timeout: 35min
+
+api:
+  id: api_server
+  reboot_timeout: ${api_reboot_timeout}
+  encryption:
+    key: !secret api_enc_key

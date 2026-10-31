@@ -1,0 +1,10 @@
+---
+# definition for 10s hold to change switch mode
+timing:
+  - ON for at least $sub_10s_hold_time
+then:
+  - logger.log: "Detected 10s Hold"
+  - lambda: |-
+      id(script_hass_toggle_10s_hold).execute();
+      id($sub_on_10s_hold).execute();
+

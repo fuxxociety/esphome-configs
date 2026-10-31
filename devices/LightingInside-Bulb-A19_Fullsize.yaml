@@ -1,0 +1,111 @@
+---
+#LightingInside E12 Base Smart Bulb / Tuya CBLC5 MCU / SM2235EGH LED driver
+substitutions:
+  nameprefix: 'bulb-'
+
+  appliance_name: LightingInside.A19
+  esp_module_type: 'Tuya CBLC5'
+
+  channel_red: '1'
+  channel_green: '0'
+  channel_blue: '2'
+  channel_ww: '3'
+  channel_cw: '4'
+
+  sub_on_turn_on:  script_do_nothing
+  sub_on_turn_off: script_do_nothing
+
+  bulb_id: bulb1
+
+packages:
+  common: !include ../modules/BK7231N.yaml
+  colorscript: !include light-effects/effects_script_colortemp.yaml
+
+esphome:
+  project:
+    name: $appliance_name
+    version: $esp_module_type
+
+sm2335:
+  data_pin: ${datapin}
+  clock_pin: ${clockpin}
+  max_power_color_channels: '9' # Valid values 0-15 (9)
+  max_power_white_channels: '12' # Valid values 0-15 (12)
+
+# Individual outputs
+output:
+  - platform: sm2335
+    id: output_red
+    channel: ${channel_red}
+  - platform: sm2335
+    id: output_green
+    channel: ${channel_green}
+  - platform: sm2335
+    id: output_blue
+    channel: ${channel_blue}
+  - platform: sm2335
+    id: output_coldwhite
+    channel: ${channel_cw}
+  - platform: sm2335
+    id: output_warmwhite
+    channel: ${channel_ww}
+
+light:
+  # Main RGBWW light
+  - platform: rgbww
+    name: ${servicename}
+    id: ${bulb_id}
+    red: output_red
+    green: output_green
+    blue: output_blue
+    cold_white: output_coldwhite
+    warm_white: output_warmwhite
+    cold_white_color_temperature: 6500 K
+    warm_white_color_temperature: 2700 K
+    color_interlock: True
+    constant_brightness: true # Brightness & Temp NOT Cool White Bright & Warm White Bright
+    restore_mode: $light_restore_mode
+    on_turn_on:
+      - homeassistant.event:
+          event: esphome.light
+          data:
+            device_id: '${system_name}'
+            action: 'on'
+      - script.execute: $sub_on_turn_on
+    on_turn_off:
+      - homeassistant.event:
+          event: esphome.light
+          data:
+            device_id: '${system_name}'
+            action: 'off'
+      - script.execute: $sub_on_turn_off
+    effects: !include light-effects/effects_rgbcw.yaml
+
+number:
+  - platform: template
+    name: ${friendly_name} Bulb${namesuffix} Default Fade
+    min_value: 0
+    max_value: 5000
+    step: 50
+    initial_value: 250
+    id: number_default_fade
+    entity_category: config
+    icon: mdi:timer-outline
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "ms"
+    mode: box
+    on_value:
+      - lambda: id(${bulb_id})->set_default_transition_length(x);
+      - script.execute: script_save_changes
+
+# https://esphome.io/guides/automations.html#script-component
+script:
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+  - id: script_do_nothing
+    then:
+      lambda: return;

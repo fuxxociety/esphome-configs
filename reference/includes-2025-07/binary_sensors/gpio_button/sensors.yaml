@@ -1,0 +1,8 @@
+# https://esphome.io/components/sensor/template.html
+platform: template
+name: Button Press Duration
+id: sensor_press_duration
+entity_category: diagnostic
+disabled_by_default: $disable_entities
+unit_of_measurement: ms
+icon: mdi:timer-outline

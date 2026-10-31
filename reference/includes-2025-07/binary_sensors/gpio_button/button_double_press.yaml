@@ -1,0 +1,11 @@
+---
+# definition for double press
+timing:
+  - ON for at most $sub_hold_time
+  - OFF for at most $sub_double_press_max_gap
+  - ON for at least 1ms
+then:
+  - logger.log: "Detected Double Press"
+  - lambda: |-
+      id(script_hass_toggle_double_press).execute();
+      id($sub_on_double_press).execute();

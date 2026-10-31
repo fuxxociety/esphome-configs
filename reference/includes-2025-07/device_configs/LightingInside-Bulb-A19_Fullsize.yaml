@@ -1,0 +1,507 @@
+---
+#LightingInside E12 Base Smart Bulb / Tuya CBLC5 MCU / SM2235EGH LED driver
+substitutions:
+  device_type: 'bulb-'
+  friendly_type: "Bulb"
+
+  appliance_name: LightingInside.A19
+  appliance_model: "BK7231N"
+  esp_module_type: 'Tuya CBLC5'
+
+  channel_red: '1'
+  channel_green: '0'
+  channel_blue: '2'
+  channel_ww: '3'
+  channel_cw: '4'
+
+  sub_on_turn_on:  script_do_nothing
+  sub_on_turn_off: script_do_nothing
+
+  friendly_num: ''
+  device_num: ''
+
+
+sm2335:
+  data_pin: ${datapin}
+  clock_pin: ${clockpin}
+  max_power_color_channels: '9' # Valid values 0-15 (9)
+  max_power_white_channels: '12' # Valid values 0-15 (12)
+
+
+# Individual outputs
+output:
+  - platform: sm2335
+    id: output_red
+    channel: ${channel_red}
+  - platform: sm2335
+    id: output_green
+    channel: ${channel_green}
+  - platform: sm2335
+    id: output_blue
+    channel: ${channel_blue}
+  - platform: sm2335
+    id: output_coldwhite
+    channel: ${channel_cw}
+  - platform: sm2335
+    id: output_warmwhite
+    channel: ${channel_ww}
+
+light:
+  # Main RGBWW light
+  - platform: rgbww
+    name: '${friendly_name} Light ${friendly_type}${friendly_num}'
+    id: '${friendly_type}${device_num}'
+    red: output_red
+    green: output_green
+    blue: output_blue
+    cold_white: output_coldwhite
+    warm_white: output_warmwhite
+    cold_white_color_temperature: 6500 K
+    warm_white_color_temperature: 2700 K
+    color_interlock: True
+    constant_brightness: true # Brightness & Temp NOT Cool White Bright & Warm White Bright
+    restore_mode: $light_restore_mode
+    on_turn_on:
+      - homeassistant.event:
+          event: esphome.light
+          data:
+            device_id: '${device_name}'
+            action: 'on'
+      - script.execute: $sub_on_turn_on
+    on_turn_off:
+      - homeassistant.event:
+          event: esphome.light
+          data:
+            device_id: '${device_name}'
+            action: 'off'
+      - script.execute: $sub_on_turn_off
+      - script.execute: $sub_on_turn_off
+    effects:
+      - random:
+          name: "Slow Random Colors"
+          transition_length: 20s
+          update_interval: 20s
+      - random:
+          name: "Fast Random Colors"
+          transition_length: 4s
+          update_interval: 5s
+      - random:
+          name: "Insane Random Colors"
+          transition_length: 1s
+          update_interval: 1s
+      - random:
+          name: "Totally Loco Random Colors"
+          transition_length: 300ms
+          update_interval: 250ms
+      - strobe:
+          name: "Strobe Effect"
+          colors:
+            - state: True
+              red: 100%
+              green: 90%
+              blue: 0%
+              white: 0%
+              duration: 50ms
+            - state: False
+              duration: 25ms
+            - state: True
+              red: 0%
+              green: 100%
+              blue: 0%
+              white: 0%
+              duration: 50ms
+      - strobe:
+          name: "Lightning"
+          colors:
+            - state: True
+              brightness: 100%
+              red: 90%
+              green: 90%
+              blue: 100%
+              white: 0%
+              duration: 50ms
+            - state: False
+              duration: 50ms
+            - state: True
+              brightness: 100%
+              red: 90%
+              green: 90%
+              blue: 100%
+              white: 0%
+              duration: 160ms
+            - state: False
+              duration: 50ms
+            - state: True
+              brightness: 100%
+              red: 90%
+              green: 90%
+              blue: 100%
+              white: 0%
+              duration: 50ms
+            - state: False
+              duration: 3000ms
+      - strobe:
+          name: "In Alarm"
+          colors:
+            - state: True
+              red: 100%
+              blue: 0%
+              green: 0%
+              white: 0%
+              duration: 150ms
+            - state: False
+              duration: 100ms
+            - state: True
+              red: 100%
+              blue: 0%
+              green: 0%
+              white: 0%
+              duration: 150ms
+            - state: False
+              duration: 100ms
+            - state: True
+              red: 0%
+              blue: 100%
+              green: 0%
+              white: 0%
+              duration: 150ms
+            - state: False
+              duration: 100ms
+      - lambda:
+          name: "Chill Mode"
+          update_interval: 70s
+          lambda: |-
+            auto call = id(${friendly_type}${device_num}).turn_on();
+            call.set_transition_length(55000);
+            call.set_white(0.0);
+            esphome::Color c = esphome::Color::random_color();
+            call.set_rgb((c.red%255)/255.0, (c.green%255)/255.0, (c.blue%255)/255.0);
+            call.set_publish(false);
+            call.set_save(false);
+            call.perform();
+      - lambda:
+          name: "Chill Mode (Vibrant)"
+          update_interval: 120s
+          lambda: |-
+            auto call = id(${friendly_type}${device_num}).turn_on();
+            call.set_transition_length(800);
+            call.set_white(0.0);
+            esphome::Color c = esphome::Color::random_color();
+            call.set_rgb((c.red%128)/255.0, (c.green%128)/255.0, (c.blue%128)/255.0);
+            call.set_publish(false);
+            call.set_save(false);
+            call.perform();
+      - lambda:
+          name: "Disco"
+          update_interval: 500ms
+          lambda: |-
+            auto call = id(${friendly_type}${device_num}).turn_on();
+            call.set_transition_length(500);
+            call.set_white(0.0);
+            esphome::Color c = esphome::Color::random_color();
+            call.set_rgb((c.red)/255.0, (c.green)/255.0, (c.blue)/255.0);
+            call.perform();
+      - lambda:
+          name: "WLED DDP"
+          update_interval: 0s
+          lambda: |-
+            static float scaled_r = 0.0;
+            static float scaled_g = 0.0;
+            static float scaled_b = 0.0;
+            static std::unique_ptr<WiFiUDP> udp_;
+
+number:
+  - platform: template
+    name: ${friendly_name} Light ${friendly_type}${friendly_num} Default Fade
+    min_value: 0
+    max_value: 5000
+    step: 50
+    initial_value: 250
+    id: number_default_fade
+    entity_category: config
+    icon: mdi:timer-outline
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "ms"
+    mode: box
+    on_value:
+      - lambda: id(${friendly_type}${device_num})->set_default_transition_length(x);
+      - script.execute: script_save_changes
+
+
+api:
+  services:
+    - service: variable_brightness
+      variables:
+        brightness: string
+      then:
+        - logger.log: "Received brightness command"
+        - if:
+            condition:
+              lambda: 'return brightness == "red";'
+            then:
+              - script.execute: effect_red
+        - if:
+            condition:
+              lambda: 'return brightness == "blue";'
+            then:
+              - script.execute: effect_blue
+        - if:
+            condition:
+              lambda: 'return brightness == "green";'
+            then:
+              - script.execute: effect_green
+        - if:
+            condition:
+              lambda: 'return brightness == "yellow";'
+            then:
+              - script.execute: effect_yellow
+        - if:
+            condition:
+              lambda: 'return brightness == "candle";'
+            then:
+              - script.execute: effect_candle
+        - if:
+            condition:
+              lambda: 'return brightness == "warm";'
+            then:
+              - script.execute: effect_warm
+        - if:
+            condition:
+              lambda: 'return brightness == "natural";'
+            then:
+              - script.execute: effect_natural
+        - if:
+            condition:
+              lambda: 'return brightness == "bright";'
+            then:
+              - script.execute: effect_bright
+        - if:
+            condition:
+              lambda: 'return brightness == "medium";'
+            then:
+              - script.execute: effect_medium
+        - if:
+            condition:
+              lambda: 'return brightness == "low";'
+            then:
+              - script.execute: effect_low
+        - if:
+            condition:
+              lambda: 'return brightness == "night";'
+            then:
+              - script.execute: effect_night
+        - if:
+            condition:
+              lambda: 'return brightness == "snow";'
+            then:
+              - script.execute: effect_snow
+        - if:
+            condition:
+              lambda: 'return brightness == "relax";'
+            then:
+              - script.execute: effect_relax
+        - if:
+            condition:
+              lambda: 'return brightness == "reading";'
+            then:
+              - script.execute: effect_reading
+        - if:
+            condition:
+              lambda: 'return brightness == "work";'
+            then:
+              - script.execute: effect_work
+        - if:
+            condition:
+              lambda: 'return brightness == "sleep";'
+            then:
+              - script.execute: effect_sleep
+        - if:
+            condition:
+              lambda: 'return brightness == "off";'
+            then:
+              - script.execute: effect_off
+
+
+# https://esphome.io/guides/automations.html#script-component
+script:
+
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+
+  - id: script_do_nothing
+    then:
+      lambda: return;
+
+  - id: effect_red
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 100%
+          red: 100%
+          green: 0%
+          blue: 0%
+          # white: 0%
+
+  - id: effect_blue
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 100%
+          red: 0%
+          green: 0%
+          blue: 100%
+          # white: 0%
+
+  - id: effect_green
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 100%
+          red: 0%
+          green: 100%
+          blue: 0%
+          # white: 0%
+
+  - id: effect_yellow
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 100%
+          red: 100%
+          green: 100%
+          blue: 0%
+          # white: 0%
+
+  - id: effect_candle
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          # TBD
+
+  - id: effect_sleep
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 10%
+          red: 100%
+          green: 55%
+          blue: 55%
+          # white: 0%
+
+  - id: effect_warm
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 100%
+          # white: 100%
+          color_temperature: 500 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100%
+
+  - id: effect_natural
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 100%
+          # white: 100%
+          color_temperature: 327 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100%
+
+  - id: effect_bright
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 100%
+          # white: 100%
+          color_temperature: 260 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100
+
+  - id: effect_medium
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 60%
+          # white: 100%
+          color_temperature: 260 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100
+
+  - id: effect_low
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 30%
+          # white: 100%
+          color_temperature: 260 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100
+
+  - id: effect_night
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 30%
+          # white 0%
+          red: 100%
+          green: 55%
+          blue: 55%
+
+  - id: effect_snow
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 100%
+          # white: 100%
+          color_temperature: 153 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100%
+
+  - id: effect_relax
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 50%
+          # white: 50%
+          color_temperature: 500 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100%
+
+  - id: effect_reading
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 80%
+          # white: 80%
+          color_temperature: 414 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100%
+
+  - id: effect_work
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 80%
+          # white: 80%
+          color_temperature: 240 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100%
+
+  - id: effect_off
+    then:
+      - light.turn_off:
+          id: ${friendly_type}${device_num}

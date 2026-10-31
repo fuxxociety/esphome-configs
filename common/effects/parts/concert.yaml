@@ -1,0 +1,31 @@
+# 120 BPM, four 2 s modes: segment flash, fill, pulse, drain (from masterbath-shower-fixture)
+addressable_lambda:
+  name: Concert Sequence
+  update_interval: 125ms
+  lambda: |-
+    const int segments = 4;
+    const int per_seg = it.size() / segments;
+    static int frame = 0, mode = 0;
+    static uint8_t r = 0, g = 0, b = 0;
+    if (++frame >= 16) {
+      frame = 0;
+      mode = (mode + 1) % 4;
+      if (mode == 1 || mode == 3) {        // new fill/drain colour at the start of those modes
+        r = random_uint32() % 256; g = random_uint32() % 256; b = random_uint32() % 256;
+      }
+    }
+    it.all() = Color::BLACK;
+    if (mode == 0) {                       // random segment flash
+      for (int s = 0; s < segments; s++) {
+        const bool on = random_uint32() % 3 != 0;
+        const Color c = on ? Color(random_uint32() % 256, random_uint32() % 256, random_uint32() % 256) : Color::BLACK;
+        for (int i = 0; i < per_seg; i++) it[s * per_seg + i] = c;
+      }
+    } else if (mode == 2) {                // whole-ring pulse on every other beat
+      it.all() = (frame % 2 == 0) ? Color(random_uint32() % 256, random_uint32() % 256, random_uint32() % 256) : Color::BLACK;
+    } else {                               // 1 = fill, 3 = drain, all segments at once
+      int lit = (frame * per_seg) / 16;
+      if (mode == 3) lit = per_seg - lit;
+      for (int s = 0; s < segments; s++)
+        for (int i = 0; i < lit && i < per_seg; i++) it[s * per_seg + i] = Color(r, g, b);
+    }

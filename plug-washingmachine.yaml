@@ -1,0 +1,7 @@
+substitutions:
+  name: plug-washingmachine
+  friendly_name: WashingMachine
+  room_key: washingmachine
+
+packages:
+  device: !include templates/minoston/mp22wp.yaml

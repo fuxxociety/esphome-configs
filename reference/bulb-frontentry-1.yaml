@@ -1,0 +1,858 @@
+substitutions:
+  device_description: Treatlife SL-10 Bulb / Tuya WB8P MCU / PWM LED driver
+  system_name: frontentry      # **** CHANGE DEVICE NAME TO SOMETHING UNIQUE PER DEVICE.  RENAME YAML FILE TO SAME NAME.    ****
+                               # **** USE DASHES (-) INSTEAD OF SPACES OR UNDERSCORE (_).  USE ONLY LOWER CASE LETTERS.     ****
+  namesuffix: '-1'
+  servicename: 'bulb_frontentry_1'
+  friendly_name: 'Front Entry' # Displayed in HA frontend
+
+  time_timezone: "America/Chicago"
+  api_timeout: '35min'
+
+  web_server_username: !secret esphome_web_server_username
+  web_server_password: !secret esphome_web_server_password
+
+  disable_entities: "true"     # set to "false" to have all entities show up in Home Assistant automatically
+  disable_webserver: "false"   # set to "true" to disable webserver listening on port 80.
+
+  wifi_ssid: !secret wifi_ssid
+  wifi_password: !secret wifi_password
+  wifi_ap_timeout: 2min        # default to 2 minute timeout for yaml file as package.
+  wifi_power: '20'
+  wifi_dns_domain: !secret wifi_dns_domain
+
+  light_restore_mode: RESTORE_INVERTED_DEFAULT_OFF  # change power-on action for main light entity
+  default_power_on_state: "Restore Power Off State"
+
+  nameprefix: 'bulb-'
+  appliance_name: Treatlife.SL-10
+  esp_module_type: 'Tuya WB8P'
+
+  sub_red_pin: 'P7'
+  sub_green_pin: 'P8'
+  sub_blue_pin: 'P9'
+  sub_white_pin: 'P24'
+
+  sub_on_turn_on:  script_do_nothing
+  sub_on_turn_off: script_do_nothing
+
+  bulb_id: 'bulb1'
+
+
+bk72xx:
+  board: generic-bk7231t-qfn32-tuya
+
+esphome:
+  name: "${nameprefix}${system_name}${namesuffix}"
+  comment: "${device_description}"
+  project:
+    name: $appliance_name
+    version: $esp_module_type
+
+
+wifi:
+  domain: $wifi_dns_domain
+  id: component_wifi
+  ssid: $wifi_ssid
+  password: $wifi_password
+  reboot_timeout: 10min
+  ap:
+    ssid: "$friendly_name AP"
+    password: $wifi_ap_password
+  use_address: 10.10.32.51
+
+ota:
+  platform: esphome
+  id: my_ota
+  password: !secret esphome_ota_password
+  on_error:
+    then:
+      - button.press: restart_button
+
+
+api:
+  id: esp_api
+  reboot_timeout: $api_timeout
+#  encryption:
+#    key: !secret api_enc_key
+
+  services:
+    - service: variable_brightness
+      variables:
+        brightness: string
+      then:
+        - logger.log: "Received brightness command"
+        - if:
+            condition:
+              lambda: 'return brightness == "red";'
+            then:
+              - script.execute: effect_red
+        - if:
+            condition:
+              lambda: 'return brightness == "blue";'
+            then:
+              - script.execute: effect_blue
+        - if:
+            condition:
+              lambda: 'return brightness == "green";'
+            then:
+              - script.execute: effect_green
+        - if:
+            condition:
+              lambda: 'return brightness == "yellow";'
+            then:
+              - script.execute: effect_yellow
+        - if:
+            condition:
+              lambda: 'return brightness == "candle";'
+            then:
+              - script.execute: effect_candle
+        - if:
+            condition:
+              lambda: 'return brightness == "warm";'
+            then:
+              - script.execute: effect_warm
+        - if:
+            condition:
+              lambda: 'return brightness == "natural";'
+            then:
+              - script.execute: effect_natural
+        - if:
+            condition:
+              lambda: 'return brightness == "bright";'
+            then:
+              - script.execute: effect_bright
+        - if:
+            condition:
+              lambda: 'return brightness == "medium";'
+            then:
+              - script.execute: effect_medium
+        - if:
+            condition:
+              lambda: 'return brightness == "low";'
+            then:
+              - script.execute: effect_low
+        - if:
+            condition:
+              lambda: 'return brightness == "night";'
+            then:
+              - script.execute: effect_night
+        - if:
+            condition:
+              lambda: 'return brightness == "snow";'
+            then:
+              - script.execute: effect_snow
+        - if:
+            condition:
+              lambda: 'return brightness == "relax";'
+            then:
+              - script.execute: effect_relax
+        - if:
+            condition:
+              lambda: 'return brightness == "reading";'
+            then:
+              - script.execute: effect_reading
+        - if:
+            condition:
+              lambda: 'return brightness == "work";'
+            then:
+              - script.execute: effect_work
+        - if:
+            condition:
+              lambda: 'return brightness == "sleep";'
+            then:
+              - script.execute: effect_sleep
+        - if:
+            condition:
+              lambda: 'return brightness == "off";'
+            then:
+              - script.execute: effect_off
+
+
+captive_portal:
+
+
+safe_mode:
+
+
+logger:
+  id: component_logger
+  # Disabling logging over UART by default.
+  # Some devices this is needed, and in general,
+  # I really don't look at it.
+  #baud_rate: 0
+
+
+time:
+  - platform: homeassistant
+    id: time_homeassistant
+    timezone: $time_timezone
+
+
+# https://esphome.io/components/web_server.html
+#web_server:
+#  id: component_web_server
+#  port: 80
+#  local: false
+#  auth:
+#    username: "${web_server_username}"
+#    password: "${web_server_password}"
+
+# PWM outputs for each LED channel
+# https://esphome.io/components/output/esp8266_pwm.html
+output:
+  - platform: libretiny_pwm
+    pin: ${sub_red_pin}
+    frequency: 200 Hz
+    id: output_red
+    max_power: .85
+  - platform: libretiny_pwm
+    pin: ${sub_green_pin}
+    frequency: 200 Hz
+    id: output_green
+    max_power: .85
+  - platform: libretiny_pwm
+    pin: ${sub_blue_pin}
+    frequency: 200 Hz
+    id: output_blue
+    max_power: .85
+  - platform: libretiny_pwm
+    pin: ${sub_white_pin}
+    frequency: 400 Hz
+    id: output_white
+    max_power: .85
+
+light:
+  # Main RGBWW light
+  - platform: rgbw
+    id: ${bulb_id}
+    default_transition_length: 250ms
+    name: ${servicename}
+    red: output_red
+    green: output_green
+    blue: output_blue
+    white: output_white
+    color_interlock: true
+    restore_mode: $light_restore_mode
+    on_turn_on:
+      - homeassistant.event:
+          event: esphome.light
+          data:
+            device_id: '${system_name}'
+            action: 'on'
+      - script.execute: $sub_on_turn_on
+    on_turn_off:
+      - homeassistant.event:
+          event: esphome.light
+          data:
+            device_id: '${system_name}'
+            action: 'off'
+      - script.execute: $sub_on_turn_off
+    effects:
+      - random:
+          name: "Slow Random Colors"
+          transition_length: 20s
+          update_interval: 20s
+      - random:
+          name: "Fast Random Colors"
+          transition_length: 4s
+          update_interval: 5s
+      - random:
+          name: "Insane Random Colors"
+          transition_length: 1s
+          update_interval: 1s
+      - random:
+          name: "Totally Loco Random Colors"
+          transition_length: 300ms
+          update_interval: 250ms
+      - strobe:
+          name: Strobe Effect
+          colors:
+            - state: True
+              red: 100%
+              green: 90%
+              blue: 0%
+              white: 0%
+              duration: 50ms
+            - state: False
+              duration: 25ms
+            - state: True
+              red: 0%
+              green: 100%
+              blue: 0%
+              white: 0%
+              duration: 50ms
+      - strobe:
+          name: Lightning
+          colors:
+            - state: True
+              brightness: 100%
+              red: 90%
+              green: 90%
+              blue: 100%
+              white: 0%
+              duration: 50ms
+            - state: False
+              duration: 50ms
+            - state: True
+              brightness: 100%
+              red: 90%
+              green: 90%
+              blue: 100%
+              white: 0%
+              duration: 160ms
+            - state: False
+              duration: 50ms
+            - state: True
+              brightness: 100%
+              red: 90%
+              green: 90%
+              blue: 100%
+              white: 0%
+              duration: 50ms
+            - state: False
+              duration: 3000ms
+      - strobe:
+          name: In Alarm
+          colors:
+            - state: True
+              red: 100%
+              blue: 0%
+              green: 0%
+              white: 0%
+              duration: 150ms
+            - state: False
+              duration: 100ms
+            - state: True
+              red: 100%
+              blue: 0%
+              green: 0%
+              white: 0%
+              duration: 150ms
+            - state: False
+              duration: 100ms
+            - state: True
+              red: 0%
+              blue: 100%
+              green: 0%
+              white: 0%
+              duration: 150ms
+            - state: False
+              duration: 100ms
+            - state: True
+              red: 0%
+              blue: 100%
+              green: 0%
+              white: 0%
+              duration: 150ms
+            - state: False
+              duration: 100ms
+      - lambda:
+          name: Chill Mode
+          update_interval: 70s
+          lambda: |-
+            auto call = id(${bulb_id}).turn_on();
+            call.set_transition_length(55000);
+            call.set_white(0.0);
+            esphome::Color c = esphome::Color::random_color();
+            call.set_rgb((c.red%255)/255.0, (c.green%255)/255.0, (c.blue%255)/255.0);
+            call.set_publish(false);
+            call.set_save(false);
+            call.perform();
+      - lambda:
+          name: Chill Mode (Vibrant)
+          update_interval: 120s
+          lambda: |-
+            auto call = id(${bulb_id}).turn_on();
+            call.set_transition_length(800);
+            call.set_white(0.0);
+            esphome::Color c = esphome::Color::random_color();
+            call.set_rgb((c.red%128)/255.0, (c.green%128)/255.0, (c.blue%128)/255.0);
+            call.set_publish(false);
+            call.set_save(false);
+            call.perform();
+      - lambda:
+          name: colorcycle
+          update_interval: 10s
+          lambda: |-
+            static int state = 0;
+            auto call = id(${bulb_id}).make_call();
+            call.set_transition_length(10000);
+            if (state == 0) {
+              call.set_red(.20);
+              call.set_green(.20);
+              call.set_blue(.20);
+            } else if (state ==1) {
+              call.set_rgb(0.0,1.0,0.0);
+            } else if (state ==2) {
+              call.set_rgb(0.0,0.0,1.0);
+            } else if (state == 3) {
+              call.set_rgb(1.0,0.0,0.0);
+            }
+            call.perform();
+            state += 1;
+            if (state == 4)
+              state =0;
+      - lambda:
+          name: Breathing
+          update_interval: 16s
+          lambda: |-
+            static int state = 0;
+            static int color = 1;
+            auto call = id(${bulb_id}).turn_on(); //the id of your light
+            call.set_color_mode(ColorMode::RGB_WHITE);
+            call.set_transition_length(15000);
+            if (state == 0)
+            {
+              call.set_brightness(1.0);
+            }
+              else if (state == 1)
+            {
+              call.set_brightness(0.01);
+            }
+              call.perform();
+              state ++;
+              if (state == 2){
+              state = 0;
+            }
+      - lambda:
+          name: RGB Breathing
+          update_interval: 16s
+          lambda: |-
+            #define Color1 1.0, 0.0, 0.0 //These are the colors defined, feel free to change or extend the list
+            #define Color2 1.0, 0.5, 0.0 //if you extend the list, dont forget to add them in the switch loop below
+            #define Color3 1.0, 1.0, 0.0 //and remember to adjust the reset counter at the bottom
+            #define Color4 0.5, 1.0, 0.0
+            #define Color5 0.0, 1.0, 0.0
+            #define Color6 0.0, 1.0, 0.5
+            #define Color7 0.0, 1.0, 1.0
+            #define Color8 0.0, 0.5, 1.0
+            #define Color9 0.0, 0.0, 1.0
+            #define Color10 0.5, 0.0, 1.0
+            #define Color11 0.5, 0.0, 1.0
+            #define Color12 1.0, 0.0, 0.5
+            static int state = 0;
+            static int color = 1;
+            auto call = id(${bulb_id}).turn_on();
+            call.set_white(0.0);
+            call.set_transition_length(15000);
+            if (state == 0)
+            {
+             call.set_brightness(0.01);
+
+            }
+             else if (state == 1)
+            {
+               switch(color)
+               {
+                 case 1: call.set_rgb(Color1);
+                         break;
+                 case 2: call.set_rgb(Color2);
+                         break;
+                 case 3: call.set_rgb(Color3);
+                         break;
+                 case 4: call.set_rgb(Color4);
+                         break;
+                 case 5: call.set_rgb(Color5);
+                         break;
+                 case 6: call.set_rgb(Color6);
+                         break;
+                 case 7: call.set_rgb(Color7);
+                         break;
+                 case 8: call.set_rgb(Color8);
+                         break;
+                 case 9: call.set_rgb(Color9);
+                         break;
+                 case 10: call.set_rgb(Color10);
+                          break;
+                 case 11: call.set_rgb(Color11);
+                          break;
+                 case 12: call.set_rgb(Color12);
+                          break;
+               }
+              call.set_brightness(1.0);
+            }
+
+             state ++;
+             if (state == 2){
+             state = 0;
+             }
+             color++;
+             if(color == 7)
+             {
+               color = 1;
+             }
+             call.perform();
+      - lambda:
+          name: randomflicker
+          update_interval: 200 ms
+          lambda: |-
+            auto call = id(${bulb_id}).turn_on();
+            float r = random_float() * 2.0f - 1.0f;
+            r =  r * r * r;
+            call.set_transition_length(r);
+            //static double br=id(global_brightness);
+            call.set_brightness(0.7 + r/10);
+            call.set_publish(false);
+            call.set_save(false);
+            call.perform();
+      - lambda:
+          name: Disco
+          update_interval: 500ms
+          lambda: |-
+            auto call = id(${bulb_id}).turn_on();
+            //call.set_transition_length(rand() % 400 + 1);
+            call.set_transition_length(500);
+            call.set_white(0.0);
+            esphome::Color c = esphome::Color::random_color();
+            call.set_rgb((c.red)/255.0, (c.green)/255.0, (c.blue)/255.0);
+            call.set_publish(false);
+            call.set_save(false);
+            call.perform();
+      - lambda:
+          name: WLED DDP
+          update_interval: 0s
+          lambda: |-
+            // our statics
+            static float scaled_r = 0.0;
+            static float scaled_g = 0.0;
+            static float scaled_b = 0.0;
+            static std::unique_ptr<WiFiUDP> udp_;
+            // allocate and start UDP
+            if (!udp_) {
+              udp_ = make_unique<WiFiUDP>();
+              if (!udp_->begin(4048)) {   // always listen on DDP port
+                return;
+              }
+            }
+            // read UDP payload
+            std::vector<uint8_t> payload;
+            while (uint16_t packet_size = udp_->parsePacket()) {
+              payload.resize(packet_size);
+              if (!udp_->read(&payload[0], payload.size())) {
+                continue;
+              }
+            }
+            // ignore small payload
+            if (payload.size() < 2) {
+              return;
+            }
+            // do the thing
+            float r = (float)payload[10]/255.0f;
+            float g = (float)payload[11]/255.0f;
+            float b = (float)payload[12]/255.0f;
+
+            float m = 0.0f;
+            if ( (r>=g) && (r>=b) ) { m = r; }
+            else if ( g >= b )      { m = g; }
+            else                    { m = b; }
+            if (m != 0.0f) {
+              scaled_r = r/m;
+              scaled_g = g/m;
+              scaled_b = b/m;
+            } else {
+              scaled_r = 0.0f;
+              scaled_g = 0.0f;
+              scaled_b = 0.0f;
+            }
+            auto call = id(${bulb_id}).turn_on();
+            call.set_transition_length(0);
+            call.set_brightness(m);
+            call.set_color_mode(ColorMode::RGB);
+            call.set_rgb(scaled_r, scaled_g, scaled_b);
+            call.set_publish(false);
+            call.set_save(false);
+            call.perform();
+      - lambda:
+          name: Bright
+          update_interval: 5 s
+          lambda: |-
+            auto call = id(${bulb_id}).turn_on();
+            call.set_transition_length(0); // in ms
+            call.set_brightness(1.0); // 1.0 is full brightness
+            call.set_color_mode(ColorMode::WHITE);
+            call.set_white(1.0);
+            call.set_publish(false);
+            call.set_save(false);
+            call.perform();
+      - lambda:
+          name: Medium
+          update_interval: 5 s
+          lambda: |-
+            auto call = id(${bulb_id}).turn_on();
+            call.set_transition_length(0); // in ms
+            call.set_brightness(0.6); // 1.0 is full brightness
+            call.set_color_mode(ColorMode::WHITE);
+            call.set_white(1.0);
+            call.set_publish(false);
+            call.set_save(false);
+            call.perform();
+      - lambda:
+          name: Low
+          update_interval: 5 s
+          lambda: |-
+            auto call = id(${bulb_id}).turn_on();
+            call.set_transition_length(0); // in ms
+            call.set_brightness(0.35); // 1.0 is full brightness
+            call.set_color_mode(ColorMode::WHITE);
+            call.set_white(1.0);
+            call.set_publish(false);
+            call.set_save(false);
+            call.perform();
+      - lambda:
+          name: Night
+          update_interval: 5 s
+          lambda: |-
+            auto call = id(${bulb_id}).turn_on();
+            call.set_transition_length(0);
+            call.set_color_mode(ColorMode::RGB);
+            call.set_brightness(0.35);
+            call.set_rgb(.75,.25,1.0);
+            call.perform();
+
+
+button:
+
+  - platform: restart
+    id: restart_button
+    name: Restart Firmware
+    entity_category: diagnostic
+    disabled_by_default: $disable_entities
+
+
+#select:
+  # default light state on boot
+#  - platform: template
+#    name: ${friendly_name}${namesuffix} Power On State (Disabled)
+#    id: select_boot_state
+#    optimistic: true
+#    options:
+#      - "Restore Power Off State"
+#      - "Always On - Last Value"
+#      - "Always On - Bright White"
+#      - "Always Off"
+#      - "YAML Configured ($light_restore_mode)"
+#    # defaulting to always on is nice so you know new bulbs are working
+#    initial_option: $default_power_on_state
+#    restore_value: true
+#    icon: mdi:restart-alert
+# save_remote_values() is a kauf-supplied function
+#    on_value:
+#      - lambda: |-
+#          if ( x == "Restore Power Off State")
+#            ${bulb_id}->set_restore_mode(LIGHT_RESTORE_DEFAULT_OFF);
+#          else if ( x == "Always On - Last Value")
+#            ${bulb_id}->set_restore_mode(LIGHT_RESTORE_AND_ON);
+#          else if ( x == "Always On - Bright White")
+#            ${bulb_id}->set_restore_mode(LIGHT_ALWAYS_ON);
+#          else if ( x == "Always Off")
+#            ${bulb_id}->set_restore_mode(LIGHT_RESTORE_AND_OFF);
+#          else
+#            ${bulb_id}->set_restore_mode(LIGHT_$light_restore_mode);
+#          ${bulb_id}->save_remote_values_();
+#      - script.execute: script_save_changes
+#    entity_category: config
+
+
+# https://esphome.io/components/number/index.html
+# https://esphome.io/components/number/template.html
+#number:      # set max power output for PWMs
+#  - platform: template
+#    name: ${friendly_name}${namesuffix} Max Power (Disabled)
+#    min_value: 1
+#    max_value: 100
+#    step: 1
+#    initial_value: 85
+#    id: number_max_power
+#    entity_category: config
+#    disabled_by_default: $disable_entities
+#    icon: mdi:brightness-percent
+#    optimistic: true
+#    restore_value: true
+#    unit_of_measurement: "%"
+#    mode: box
+#    on_value:
+#      - lambda: |-
+#          float new_power = ((float)x)/100.0f;
+#          id(pwm_red).set_max_power(new_power);
+#          id(pwm_green).set_max_power(new_power);
+#          id(pwm_blue).set_max_power(new_power);
+#          id(pwm_white).set_max_power(new_power);
+#          id(${bulb_id})->set_next_write();
+#      - script.execute: script_save_changes
+#  - platform: template
+#    name: ${friendly_name} Bulb${namesuffix} Default Fade
+#    min_value: 0
+#    max_value: 5000
+#    step: 50
+#    initial_value: 250
+#    id: number_default_fade
+#    entity_category: config
+#    icon: mdi:timer-outline
+#    optimistic: true
+#    restore_value: true
+#    unit_of_measurement: "ms"
+#    mode: box
+#    on_value:
+#      - lambda: id(${bulb_id})->set_default_transition_length(x);
+#      - script.execute: script_save_changes
+
+
+# https://esphome.io/guides/automations.html#script-component
+script:
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+
+  - id: script_do_nothing
+    then:
+      lambda: return;
+
+  - id: effect_red
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          red: 100%
+          green: 0%
+          blue: 0%
+          # white: 0%
+  - id: effect_blue
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          red: 0%
+          green: 0%
+          blue: 100%
+          # white: 0%
+  - id: effect_green
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          red: 0%
+          green: 100%
+          blue: 0%
+          # white: 0%
+  - id: effect_yellow
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          red: 100%
+          green: 100%
+          blue: 0%
+          # white: 0%
+  - id: effect_candle
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          # TBD
+  - id: effect_sleep
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 10%
+          red: 100%
+          green: 55%
+          blue: 55%
+          # white: 0%
+  - id: effect_warm
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          white: 100%
+          # red: 100%
+          # green: 100%
+          # blue: 100%
+  - id: effect_natural
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          white: 100%
+          # red: 100%
+          # green: 100%
+          # blue: 100%
+  - id: effect_bright
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          white: 100%
+          # red: 100%
+          # green: 100%
+          # blue: 100
+  - id: effect_medium
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 60%
+          white: 100%
+          # red: 100%
+          # green: 100%
+          # blue: 100
+  - id: effect_low
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 30%
+          white: 100%
+          # red: 100%
+          # green: 100%
+          # blue: 100
+  - id: effect_night
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 30%
+          white: 0%
+          red: 100%
+          green: 55%
+          blue: 55%
+  - id: effect_snow
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 100%
+          white: 100%
+          red: 100%
+          green: 100%
+          blue: 100%
+  - id: effect_relax
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 50%
+          white: 50%
+          red: 100%
+          green: 100%
+          blue: 100%
+  - id: effect_reading
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 80%
+          white: 80%
+          red: 100%
+          green: 100%
+          blue: 100%
+  - id: effect_work
+    then:
+      - light.turn_on:
+          id: ${bulb_id}
+          brightness: 80%
+          white: 80%
+          red: 100%
+          green: 100%
+          blue: 100%
+  - id: effect_off
+    then:
+      - light.turn_off:
+          id: ${bulb_id}
+
+

@@ -1,0 +1,41 @@
+# Load for common/switch/core.yaml: a plain ON/OFF LAMP on the relay (the craft room wash-light plugs) (BEHAVIOR.md §2).
+# Entity: the light (on/off, name = device name). A single press toggles it (Switched); events carry
+# brightness "bright"/"off" for its new state.
+output:
+  # the relay is driven by relay_apply from the triggers below, not by this output
+  - {platform: template, id: bb_lamp, type: binary, write_action: [lambda: return;]}
+
+light:
+  - platform: binary
+    id: main_light
+    name: None
+    output: bb_lamp
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: id(load_on) = true;
+      - script.execute: relay_apply
+      - script.execute: copy_vals
+      - script.execute: event_switch_on
+    on_turn_off:
+      - lambda: id(load_on) = false;
+      - script.execute: relay_apply
+      - script.execute: copy_vals
+      - script.execute: event_switch_off
+
+script:
+  - id: load_force_off
+    then:
+      - light.turn_off: main_light
+
+  - id: gesture_single
+    then:
+      - lambda: |-
+          const bool smart = !id(ha_fallback) && id(relay_config).current_option() == "Always On";
+          if (!smart) {
+            if (id(relay_on)) id(main_light).turn_off().perform(); else id(main_light).turn_on().perform();
+          } else if (!id(relay_on)) {
+            id(main_light).turn_on().perform();   // Always On with the relay open: a press is what energises it
+          }                                        // Always On otherwise: HA decides, the press is only an event
+          id(ev_mode) = smart ? "Always On" : "Switched";
+          id(ev_brightness) = id(main_light).current_values.is_on() ? "bright" : "off";
+      - script.execute: event_single

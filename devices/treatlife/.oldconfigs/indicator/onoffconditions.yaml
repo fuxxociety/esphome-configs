@@ -1,0 +1,13 @@
+---
+- if:
+    condition:
+      - api.connected:
+      - lambda: 'return id(latch${number});'
+    then:
+      - homeassistant.event:
+          event: esphome.switch
+          data:
+            device: ${name}
+            action: '${onoff}'
+    else: # If HA can't be reached, then
+      - switch.turn_${onoff}: 'relaytrig${number}'

@@ -1,0 +1,7 @@
+---
+# definition for 30s hold to clear credentials
+timing:
+  - ON for at least 30s
+then:
+  - logger.log: "Detected 30s Hold"
+  - script.execute: $sub_on_30s_hold

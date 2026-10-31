@@ -1,0 +1,18 @@
+---
+# OTA (Over The Air) component
+# Contains my common Wi-Fi setup.
+# https://esphome.io/components/ota.html
+
+ota:
+  - platform: esphome
+    id: my_ota
+    password: !secret esphome_ota_password
+
+#ota:
+#  password: "libretuya-bk7231n"
+#  id: my_ota
+
+#esphome:
+#  on_boot:
+#    - lambda: |-
+#        id(my_ota).set_auth_password("${new_ota_pass}");

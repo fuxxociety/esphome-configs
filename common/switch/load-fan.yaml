@@ -1,0 +1,39 @@
+# Load for common/switch/core.yaml: an on/off FAN on the relay (bath vents) (BEHAVIOR.md §2, §5).
+# Entity: the fan (name = device name).
+#
+# A single press toggles the fan (Switched). Events carry brightness "bright"/"off" for the fan's new state, which
+# is what script.single_press_vent uses to start or cancel timer.<room_key>.
+fan:
+  - platform: template
+    id: main_fan
+    name: None
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: id(load_on) = true;
+      - script.execute: relay_apply
+      - script.execute: copy_vals
+      - script.execute: event_switch_on
+    on_turn_off:
+      - lambda: id(load_on) = false;
+      - script.execute: relay_apply
+      - script.execute: copy_vals
+      - script.execute: event_switch_off
+
+script:
+  - id: load_force_off
+    then:
+      - fan.turn_off: main_fan
+
+  - id: gesture_single
+    then:
+      - lambda: |-
+          const bool smart = !id(ha_fallback) && id(relay_config).current_option() == "Always On";
+          if (!smart) {
+            // Switched / fallback: toggle locally; the relay follows the fan
+            if (id(relay_on)) id(main_fan).turn_off().perform(); else id(main_fan).turn_on().perform();
+          } else if (!id(relay_on)) {
+            id(main_fan).turn_on().perform();   // Always On with the relay open: a press is what energises it
+          }                                      // Always On otherwise: HA decides, the press is only an event
+          id(ev_mode) = smart ? "Always On" : "Switched";
+          id(ev_brightness) = id(main_fan).state ? "bright" : "off";
+      - script.execute: event_single

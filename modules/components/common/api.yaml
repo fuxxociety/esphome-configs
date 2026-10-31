@@ -1,0 +1,13 @@
+---
+# https://esphome.io/components/api.html
+#
+# API password auth was removed in ESPHome 2026.1; devices now use the shared
+# encryption key from secrets.yaml (api_enc_key). After flashing a device that was
+# on password auth, Home Assistant will ask for this key once (Reconfigure).
+substitutions:
+  api_timeout: '35min'
+
+api:
+  reboot_timeout: $api_timeout
+  encryption:
+    key: !secret api_enc_key

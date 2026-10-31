@@ -1,0 +1,7 @@
+on_press:
+  - switch.toggle: fixture
+  - logger.log: "Single Click"
+  - homeassistant.event:
+      event: esphome.${name}.button
+      data:
+      title: 'single_click'

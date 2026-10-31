@@ -1,0 +1,7 @@
+substitutions:
+  name: bulb-livingroom-shelf
+  friendly_name: Living Room Shelf
+  room_key: livingroom_shelf   # standalone, no wall switch
+
+packages:
+  device: !include templates/kauf/rgbww-bulb.yaml

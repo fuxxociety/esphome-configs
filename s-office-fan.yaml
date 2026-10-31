@@ -1,0 +1,8 @@
+substitutions:
+  system_name: office-fan                # **** CHANGE DEVICE NAME TO SOMETHING UNIQUE PER DEVICE.  RENAME YAML FILE TO SAME NAME.    ****
+                                 # **** USE DASHES (-) INSTEAD OF SPACES OR UNDERSCORE (_).  USE ONLY LOWER CASE LETTERS.     ****
+  friendly_name: office-fan      # **** CHANGE FRIENDLY NAME TO SOMETHING UNIQUE PER DEVICE                                   ****
+  disable_entities: "true"
+
+packages:
+  sw: !include devices/treatlife-ss01s-events.yaml

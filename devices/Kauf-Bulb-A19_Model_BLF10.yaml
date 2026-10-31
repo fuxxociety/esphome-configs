@@ -1,0 +1,99 @@
+---
+# https://esphome.io/guides/configuration-types.html#substitutions
+substitutions:
+  nameprefix: 'bulb-' # bulb
+  
+  appliance_name: Kauf.BLF10
+  esp_module_type: 'Espressif ESP8285'
+
+  disable_entities:  "true"    # set to "false" to have all entities show up in Home Assistant automatically
+
+  sub_red_pin:    GPIO4
+  sub_green_pin:  GPIO12
+  sub_blue_pin:   GPIO14
+  sub_cw_pin:     GPIO5
+  sub_ww_pin:     GPIO13
+
+  sub_on_turn_on:  script_do_nothing
+  sub_on_turn_off: script_do_nothing
+
+  bulb_id: 'bulbtest'
+  
+packages:
+  common: !include ../modules/ESP8285.yaml
+  colorscript: !include light-effects/effects_script_colortemp.yaml
+
+esphome:
+  project:
+    name: $appliance_name
+    version: $esp_module_type
+    
+# PWM outputs for each LED channel
+# https://esphome.io/components/output/esp8266_pwm.html
+output:
+  - platform: esp8266_pwm
+    pin: $sub_red_pin
+    frequency: 200 Hz
+    id: pwm_red
+    max_power: .85
+  - platform: esp8266_pwm
+    pin: $sub_green_pin
+    frequency: 200 Hz
+    id: pwm_green
+    max_power: .85
+  - platform: esp8266_pwm
+    pin: $sub_blue_pin
+    frequency: 200 Hz
+    id: pwm_blue
+    max_power: .85
+  - platform: esp8266_pwm
+    pin: $sub_cw_pin
+    frequency: 400 Hz
+    id: pwm_cw
+    max_power: .85
+  - platform: esp8266_pwm
+    pin: $sub_ww_pin
+    frequency: 400 Hz
+    id: pwm_ww
+    max_power: .85
+
+# https://esphome.io/components/light/index.html
+light:
+  # Main RGBWW light
+  - platform: rgbww
+    id: ${bulb_id}
+    default_transition_length: 250ms
+    name: ${servicename}
+    red: pwm_red
+    green: pwm_green
+    blue: pwm_blue
+    warm_white: pwm_ww
+    cold_white: pwm_cw
+    restore_mode: $light_restore_mode
+    on_turn_on:
+      - homeassistant.event:
+          event: esphome.light
+          data:
+            device_id: '${system_name}'
+            action: 'on'
+      - script.execute: $sub_on_turn_on
+    on_turn_off:
+      - homeassistant.event:
+          event: esphome.light
+          data:
+            device_id: '${system_name}'
+            action: 'off'
+      - script.execute: $sub_on_turn_off
+    effects: !include light-effects/effects_rgbcw.yaml
+
+# https://esphome.io/guides/automations.html#script-component
+script:
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+
+  - id: script_do_nothing
+    then:
+      lambda: return;

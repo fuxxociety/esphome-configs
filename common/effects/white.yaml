@@ -1,0 +1,5 @@
+# Effects for lights without colour (CWW fixture panels, mono PWM lights): the colour list's brightness-only subset.
+- !include parts/breathing.yaml
+- !include parts/flicker.yaml
+- !include parts/strobe_white.yaml
+- !include parts/lightning_white.yaml

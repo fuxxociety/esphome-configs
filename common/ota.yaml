@@ -1,0 +1,6 @@
+# https://esphome.io/components/ota.html
+# Same password as the 2024/2025 fleet, so the first OTA onto the new firmware just works.
+ota:
+  - platform: esphome
+    id: my_ota
+    password: !secret esphome_ota_password

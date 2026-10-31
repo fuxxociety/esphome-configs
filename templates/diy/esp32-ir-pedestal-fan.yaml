@@ -1,0 +1,145 @@
+# DIY ESP32 bridge for an IR-remote pedestal fan (the master bedroom pedestal fan). From the live device's config
+# (esphome_backup/fan-mbrpedestal.yaml, ESPHome 2024.5.5) with the shared common/ layer underneath.
+#   - fan: ssieb's `pedestal` component as the live firmware ran it, vendored in components/pedestal (removed upstream;
+#     ported to ESPHome 2026, see components/pedestal/VENDORED.md). It sends 12-bit IR codes for power/oscillate/speed and reads the real speed from the
+#     fan's speed line (duty cycle, 12 speeds) and oscillation from GPIO16.
+#   - IR receiver: the fan's own remote, decoded as 6 binary sensors; 6 buttons transmit the raw codes.
+#   - BLE tracker + active Bluetooth proxy at ESPHome's default 30 ms scan window (as the live device ran).
+#   - no improv_serial or UART logging: the ESP32 is sealed inside the fan (no serial access).
+# Pins: IR TX GPIO32 (inverted), IR RX GPIO27 (inverted), speed sense GPIO17, oscillation sense GPIO16.
+#
+# Device file:
+#   substitutions: {name: fan-masterbed-pedestal, friendly_name: Master Bed Pedestal, room_key: masterbed_pedestal}
+#   packages:      {device: !include templates/diy/esp32-ir-pedestal-fan.yaml}
+substitutions:
+  device_description: DIY ESP32 IR bridge for a pedestal fan
+  ir_tx_pin: GPIO32
+  ir_rx_pin: GPIO27
+  speed_pin: GPIO17
+  osc_pin: GPIO16
+  ble_scan_window: 30ms          # ESPHome default; the live device never set one
+  wifi_reboot_timeout: 15min     # as the live device
+
+packages:
+  platform: !include ../../common/platforms/esp32.yaml
+  ble: !include ../../common/bluetooth/proxy.yaml
+
+esphome:
+  project:
+    name: esphome.pedestalfan
+    version: "1.0"
+
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [pedestal]
+
+logger:
+  level: INFO
+  logs:
+    pedestal.fan: ERROR
+    duty_cycle: ERROR
+    sensor: ERROR
+
+web_server:
+
+remote_transmitter:
+  id: remote
+  pin:
+    number: ${ir_tx_pin}
+    inverted: true
+  carrier_duty_percent: 100%
+  non_blocking: false   # transmit as ESPHome 2024 did (the live firmware); 2026 defaults to non-blocking
+
+remote_receiver:
+  id: ir_receiver
+  pin:
+    number: ${ir_rx_pin}
+    inverted: true
+  dump: rc_switch
+
+sensor:
+  - platform: duty_cycle
+    id: fanspeed
+    pin:
+      number: ${speed_pin}
+      mode:
+        input: true
+        pullup: false
+    update_interval: 500ms
+    internal: true
+  - platform: copy
+    id: fanspeed_copy
+    source_id: fanspeed
+    name: Fan Speed
+    filters:
+      - throttle: 1s
+
+fan:
+  - platform: pedestal
+    id: main_fan
+    name: None
+    pulse: fanspeed
+    osc_pin: ${osc_pin}
+    transmitter_id: remote
+
+binary_sensor:
+  - {platform: remote_receiver, name: IR_Power, rc_switch_raw: {code: "110110000001"}}
+  - {platform: remote_receiver, name: IR_Timer, rc_switch_raw: {code: "110110000010"}}
+  - {platform: remote_receiver, name: IR_SpeedJump, rc_switch_raw: {code: "110110000100"}}
+  - {platform: remote_receiver, name: IR_Oscillate, rc_switch_raw: {code: "110110001000"}}
+  - {platform: remote_receiver, name: IR_SPEED_UP, rc_switch_raw: {code: "110110010000"}}
+  - {platform: remote_receiver, name: IR_SPEED_DOWN, rc_switch_raw: {code: "110110100000"}}
+
+button:
+  - platform: template
+    name: "1- Power"
+    disabled_by_default: true
+    on_press:
+      - remote_transmitter.transmit_raw:
+          code: [1297, -404, 1297, -404, 444, -1250, 1297, -404, 1295, -405, 443, -1250, 443, -1250, 444, -1250, 443, -1250, 442, -1250, 444, -1250, 1297]
+  - platform: template
+    name: "2- Oscillate"
+    id: sw_osc
+    disabled_by_default: true
+    on_press:
+      - remote_transmitter.transmit_raw:
+          code: [1300, -410, 1300, -410, 440, -1250, 1300, -410, 1300, -410, 450, -1250, 450, -1250, 450, -1250, 1300, -410, 450, -1250, 450, -1250, 450]
+  - platform: template
+    name: "3- Speed_Jump"
+    id: sw_speedjump
+    disabled_by_default: true
+    on_press:
+      - remote_transmitter.transmit_raw:
+          code: [1296, -406, 1297, -407, 442, -1252, 1295, -406, 1297, -405, 444, -1251, 443, -1251, 442, -1251, 443, -1252, 1294, -407, 443, -1251, 443]
+  - platform: template
+    name: "4- Timer"
+    id: sw_timer
+    disabled_by_default: true
+    on_press:
+      - remote_transmitter.transmit_raw:
+          code: [1294, -408, 1294, -408, 441, -1253, 1295, -407, 1295, -408, 441, -1253, 441, -1252, 441, -1255, 439, -1253, 440, -1253, 1294, -409, 440]
+          repeat:
+            times: 1
+            wait_time: 0s
+  - platform: template
+    name: "5- Increase"
+    id: sw_increase
+    disabled_by_default: true
+    on_press:
+      - remote_transmitter.transmit_raw:
+          code: [1300, -400, 1300, -404, 473, -1222, 1301, -401, 1298, -404, 444, -1251, 444, -1248, 1301, -403, 445, -1249, 444, -1249, 446, -1246, 446]
+          repeat:
+            times: 1
+            wait_time: 0s
+  - platform: template
+    name: "6- Decrease"
+    id: sw_decrease
+    disabled_by_default: true
+    on_press:
+      - remote_transmitter.transmit_raw:
+          code: [1296, -402, 1300, -405, 443, -1249, 1298, -405, 1297, -405, 445, -1251, 1298, -404, 443, -1251, 444, -1250, 444, -1250, 444, -1250, 442]
+          repeat:
+            times: 1
+            wait_time: 0s

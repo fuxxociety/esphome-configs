@@ -1,0 +1,17 @@
+substitutions:
+  device_description: Treatlife SL-10 Bulb / Tuya CB8P MCU / PWM LED driver
+  system_name: officeceiling            # **** CHANGE DEVICE NAME TO SOMETHING UNIQUE PER DEVICE.  RENAME YAML FILE TO SAME NAME.    ****
+                                        # **** USE DASHES (-) INSTEAD OF SPACES OR UNDERSCORE (_).  USE ONLY LOWER CASE LETTERS.     ****
+  namesuffix: '-2'                      #
+  servicename: 'bulb_officeceiling_2'
+  friendly_name: 'Office Ceiling'       # Displayed in HA frontend
+
+  light_restore_mode: RESTORE_INVERTED_DEFAULT_OFF  # change power-on action for main light entity
+  default_power_on_state: "Restore Power Off State"
+
+  disable_entities:  "true"     # set to "false" to have all entities show up in Home Assistant automatically
+  disable_webserver: "true"    # set to "true" to disable the webserver listening on port 80.
+
+packages:
+  # New style CB8P MCU - MAC beginning with A0-92-08
+  bulb: !include ./devices/Treatlife-Bulb-A19_Model_SL10-CB8P.yaml

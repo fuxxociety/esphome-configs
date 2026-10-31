@@ -1,0 +1,214 @@
+substitutions:
+  system_name: masterbath-toilet   # device hostname = live name (ESPHome 2026 migration)
+  nameprefix: 'bulb-'   # device hostname = live name (ESPHome 2026 migration)
+  device_description: LightingInside A19 Smart Bulb / Tuya CBLC5 MCU / SM2235EGH LED driver
+  device_name: masterbath-toilet        # **** CHANGE DEVICE NAME TO SOMETHING UNIQUE PER DEVICE.   ****
+                                        # **** USE DASHES (-) INSTEAD OF SPACES OR UNDERSCORE (_).  USE ONLY LOWER CASE LETTERS.     ****
+  friendly_name: Masterbath Toilet      # **** CHANGE FRIENDLY NAME TO SOMETHING UNIQUE PER DEVICE                                   ****
+
+  device_type: 'bulb-'
+  friendly_type: "Bulb"
+
+  device_num: '_1'
+  friendly_num: ' 1'
+
+  # SM2235 config
+  datapin: P24
+  clockpin: P6
+
+  light_restore_mode: RESTORE_INVERTED_DEFAULT_OFF  # change power-on action for main light entity
+
+  disable_entities:  "true"     # set to "false" to have all entities show up in Home Assistant automatically
+  disable_webserver: "true"    # set to "true" to disable the webserver listening on port 80.
+
+  appliance_name: LightingInside.A19
+  appliance_model: "BK7231N"
+  esp_module_type: 'Tuya CBLC5'
+
+  channel_red: '1'
+  channel_green: '0'
+  channel_blue: '2'
+  channel_ww: '3'
+  channel_cw: '4'
+
+  sub_on_turn_on:  script_do_nothing
+  sub_on_turn_off: script_do_nothing
+
+
+esphome:
+  friendly_name: ${friendly_name}
+
+
+packages:
+  mcu: !include modules/BK7231N.yaml
+
+
+sm2335:
+  data_pin: ${datapin}
+  clock_pin: ${clockpin}
+  max_power_color_channels: '9' # Valid values 0-15 (9)
+  max_power_white_channels: '12' # Valid values 0-15 (12)
+
+
+# Individual outputs
+output:
+  - platform: sm2335
+    id: output_red
+    channel: ${channel_red}
+  - platform: sm2335
+    id: output_green
+    channel: ${channel_green}
+  - platform: sm2335
+    id: output_blue
+    channel: ${channel_blue}
+  - platform: sm2335
+    id: output_coldwhite
+    channel: ${channel_cw}
+  - platform: sm2335
+    id: output_warmwhite
+    channel: ${channel_ww}
+
+light:
+  # Main RGBWW light entity
+  - platform: rgbww
+    name: '${friendly_name} Light'
+    id: ${friendly_type}${device_num}
+    red: output_red
+    green: output_green
+    blue: output_blue
+    cold_white: output_coldwhite
+    warm_white: output_warmwhite
+    cold_white_color_temperature: 6500 K
+    warm_white_color_temperature: 2700 K
+    color_interlock: True
+    constant_brightness: true # Brightness & Temp NOT Cool White Bright & Warm White Bright
+    restore_mode: $light_restore_mode
+    on_turn_on:
+      - homeassistant.event:
+          event: esphome.light
+          data:
+            device_id: '${device_name}'
+            action: 'on'
+      - script.execute: $sub_on_turn_on
+    on_turn_off:
+      - homeassistant.event:
+          event: esphome.light
+          data:
+            device_id: '${device_name}'
+            action: 'off'
+      - script.execute: $sub_on_turn_off
+
+
+number:
+  - platform: template
+    name: ${friendly_name} Light ${friendly_type}${friendly_num} Default Fade
+    min_value: 0
+    max_value: 5000
+    step: 50
+    initial_value: 250
+    id: number_default_fade
+    entity_category: config
+    icon: mdi:timer-outline
+    optimistic: true
+    restore_value: true
+    unit_of_measurement: "ms"
+    mode: box
+    on_value:
+      - lambda: id(${friendly_type}${device_num})->set_default_transition_length(x);
+      - script.execute: script_save_changes
+
+
+api:
+  services:
+    - service: variable_brightness
+      variables:
+        brightness: string
+      then:
+        - logger.log: "Received brightness command"
+        - if:
+            condition:
+              lambda: 'return brightness == "bright";'
+            then:
+              - script.execute: effect_bright
+        - if:
+            condition:
+              lambda: 'return brightness == "medium";'
+            then:
+              - script.execute: effect_medium
+        - if:
+            condition:
+              lambda: 'return brightness == "low";'
+            then:
+              - script.execute: effect_low
+        - if:
+            condition:
+              lambda: 'return brightness == "night";'
+            then:
+              - script.execute: effect_night
+        - if:
+            condition:
+              lambda: 'return brightness == "off";'
+            then:
+              - script.execute: effect_off
+
+
+# https://esphome.io/guides/automations.html#script-component
+script:
+
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+
+  - id: script_do_nothing
+    then:
+      lambda: return;
+
+  - id: effect_bright
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 100%
+          # white: 100%
+          color_temperature: 260 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100
+
+  - id: effect_medium
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 60%
+          # white: 100%
+          color_temperature: 260 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100
+
+  - id: effect_low
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 30%
+          # white: 100%
+          color_temperature: 260 mireds
+          # red: 100%
+          # green: 100%
+          # blue: 100
+
+  - id: effect_night
+    then:
+      - light.turn_on:
+          id: ${friendly_type}${device_num}
+          brightness: 30%
+          # white 0%
+          red: 100%
+          green: 55%
+          blue: 55%
+
+  - id: effect_off
+    then:
+      - light.turn_off:
+          id: ${friendly_type}${device_num}

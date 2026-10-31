@@ -1,0 +1,10 @@
+substitutions:
+  name: plug-craftroom-wash-1
+  friendly_name: Craft Room Wash 1
+  room_key: craftroom_wash
+
+packages:
+  device: !include templates/enbrighten/wfd4105.yaml
+
+wifi:
+  use_address: 10.10.32.125   # as aquarium-plug.yaml (until DNS knows the new hostname)

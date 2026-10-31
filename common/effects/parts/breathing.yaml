@@ -1,0 +1,2 @@
+# brightness only, so it works on every light (the old lambda forced RGB_WHITE, which no fleet light supports)
+pulse: {name: Breathing, transition_length: 15s, update_interval: 16s, min_brightness: 1%, max_brightness: 100%}

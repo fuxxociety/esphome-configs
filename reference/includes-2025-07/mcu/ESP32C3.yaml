@@ -1,0 +1,47 @@
+---
+# Generic ESP-WROOM32 module with ESP32-D0WDQ6 chip
+# Xtensa single-/dual-core 32-bit LX6 microprocessor(s)
+# Wi-Fi: 802.11 b/g/n
+# Bluetooth: v4.2 BR/EDR and BLE (shares the radio with Wi-Fi)
+# 34 × programmable GPIOs
+# 12-bit SAR ADC up to 18 channels
+# 2 x 8-bit DAC
+#
+# https://espressif.com/en/products/hardware/esp32/overview
+#
+substitutions:
+  disable_entities: 'true'
+  wifi_tx_power: 17dB
+  pwm_platform: ledc
+
+
+esphome:
+  platformio_options:
+    board_build.mcu: esp32c3
+    board_build.variant: esp32c3
+    board_build.flash_mode: dio
+
+
+esp32:
+  variant: ESP32C3
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf
+    version: recommended
+
+
+packages:
+  pkg_esphome: !include components/esphome.yaml
+  pkg_logger: !include components/logger.yaml
+  pkg_api: !include components/api.yaml
+  pkg_ota: !include components/ota.yaml
+  pkg_wifi: !include components/wifi.yaml
+  pkg_captive: !include components/captive_portal.yaml
+  pkg_restart: !include components/restart_button.yaml
+  pkg_status: !include components/status_binary_sensor.yaml
+  pkg_time: !include components/time.yaml
+  pkg_web: !include components/web_server.yaml
+  pkg_ver: !include components/version_text_sensor.yaml
+  # ble_tracker requires ESP32 and esp_idf framework
+  pkg_bt: !include ../bluetooth_proxy/ble_tracker.yaml
+

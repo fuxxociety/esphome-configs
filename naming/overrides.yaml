@@ -1,0 +1,68 @@
+# Hand decisions for tools/rename_map.py draft, keyed by the HA device name.
+# `hostname` = the live device's CURRENT hostname (picks its config); any other key overrides the proposal.
+"Front Porch":
+  hostname: frontporch            # front-porch.yaml; "Front Porch" is also the porch bulb's friendly name
+"Upstairs 3-Way":
+  hostname: upstairs-3w-light-switch
+"Office-Light-Switch":
+  room_key: officeceiling         # HA has script.single_press_officeceiling and light.group_officeceiling
+
+# No longer on the aquarium: plug feeding a bright "wash" light in the craft room. Not driven by the wall switch's
+# smart-mode loop; candidate for the craft room switch's double-press (BEHAVIOR.md §5). Exposes a light (representative).
+"Aquarium Light Outlet":
+  class: plug_light
+  new_hostname: plug-craftroom-wash-1
+  friendly_name: Craft Room Wash 1
+  room_key: craftroom_wash
+"Kauf Plug 44ed55":               # the other craft room wash light
+  class: plug_light
+  new_hostname: plug-craftroom-wash-2
+  friendly_name: Craft Room Wash 2
+  room_key: craftroom_wash
+
+# Unreachable, retired (2026-10-31): left out of the refactor, HA entries untouched
+"Kauf-Bulb-302342": {retire: true}
+"Kauf-Bulb-30288A": {retire: true}
+"Kauf-Bulb-302E9A": {retire: true}
+"Kauf-Bulb-304Cc4": {retire: true}
+
+# Shower fixture and tub bulb are both powered by the master bath shower wall switch -> same room_key
+"Masterbath Shower Fixture":
+  new_hostname: light-masterbath-shower
+  friendly_name: Master Bath Shower Fixture
+  room_key: masterbath_shower
+"Masterbath Tub":
+  new_hostname: bulb-masterbath-tub
+  friendly_name: Master Bath Tub
+  room_key: masterbath_shower
+
+# Standalone bulbs, no wall switch
+"Masterbedroom-Shelf-Light-Bulb":
+  new_hostname: bulb-masterbed-shelf
+  friendly_name: Master Bed Shelf
+  room_key: masterbed_shelf
+"Bulb-Livingroom-Shelf":
+  friendly_name: Living Room Shelf
+  room_key: livingroom_shelf
+
+"growlight":
+  new_hostname: light-livingroom-grow
+  friendly_name: Living Room Grow
+  room_key: livingroom_grow
+# Hand-tuned Minoston plug: keep the friendly name so every washingmachine_* entity id stays exactly as it is
+# (used by start_washing_machine_timer, utility_appliances_notification, clothes_notification_*)
+"Plug-Washingmachine":
+  class: plug_appliance
+  new_hostname: plug-washingmachine
+  friendly_name: WashingMachine
+# Physically a Treatlife DS01C (dimmer-style fan controller) that was flashed with the SS01S config
+"Switch-Office-Fan":
+  class: ds01c
+  keep_config: dimmer-office-ceiling.yaml
+  new_hostname: fan-office-ceiling
+  friendly_name: Office Ceiling
+  room_key: office_ceiling
+"fan-mbrpedestal":
+  room_key: masterbed_pedestal
+"Plug-Dryer": {class: plug_appliance}
+"Plug-Dishwasher": {class: plug_appliance}

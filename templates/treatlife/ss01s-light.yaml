@@ -1,0 +1,10 @@
+# Treatlife SS01S wall switch for a room's lights (BEHAVIOR.md §0, §2).
+#   substitutions: {name: switch-kitchen, friendly_name: Kitchen, room_key: kitchen}
+#   packages:      {device: !include templates/treatlife/ss01s-light.yaml}
+substitutions:
+  device_description: Treatlife SS01S light switch
+
+packages:
+  platform: !include ../../common/platforms/esp8266.yaml
+  hardware: !include ss01s-hardware.yaml
+  load: !include ../../common/switch/load-smart-light.yaml

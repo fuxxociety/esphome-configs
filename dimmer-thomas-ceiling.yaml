@@ -1,0 +1,17 @@
+# ##################################
+# Treatlife Dimmer Switch DS01C
+# ##################################
+#
+# Recreated 2026-10-30: dimmer-thomas-ceiling (10.10.32.75, ESPHome 2024.4.1) was live on the
+# network with no config in the tree. Entities match the running firmware (tools/compare_entities.py).
+---
+substitutions:
+  system_name: thomas-ceiling             # **** CHANGE DEVICE NAME TO SOMETHING UNIQUE PER DEVICE.  RENAME YAML FILE TO SAME NAME.    ****
+                                          # **** USE DASHES (-) INSTEAD OF SPACES OR UNDERSCORE (_).  USE ONLY LOWER CASE LETTERS.     ****
+  friendly_name: Thomas Ceiling           # **** CHANGE FRIENDLY NAME TO SOMETHING UNIQUE PER DEVICE                                   ****
+
+  disable_entities:  "true"     # set to "false" to have all entities show up in Home Assistant automatically
+  disable_webserver: "false"    # set to "true" to disable the webserver listening on port 80.
+
+packages:
+  sw: !include devices/treatlife-ds01c.yaml

@@ -1,0 +1,54 @@
+global_value:
+  - id: current_color
+    type: color
+    value: 0xffffff_rgb
+
+light:
+  - platform: esp8266_pwm
+    name: "Bedroom Light 1"
+    pin: D1
+    inverted: true
+    lambda: |-
+      current_color.add_on_value_callback([](const Color &color){
+        bedroom_light_1.set_color(color);
+      });
+  - platform: esp8266_pwm
+    name: "Bedroom Light 2"
+    pin: D2
+    inverted: true
+    lambda: |-
+      current_color.add_on_value_callback([](const Color &color){
+        bedroom_light_2.set_color(color);
+      });
+
+effect:
+  - id: random_color
+    lambda: |-
+      std::vector<Color> colors = {
+        0xff0000_rgb,  // red
+        0x00ff00_rgb,  // green
+        0x0000ff_rgb,  // blue
+        0xff00ff_rgb,  // pink
+        0x00ffff_rgb,  // cyan
+        0xffff00_rgb   // yellow
+      };
+      auto duration = 500ms;
+      while (true) {
+        current_color.set(random_element(colors));
+        delay(duration);
+      }
+
+automation:
+  - alias: "Start Random Color Effect"
+    trigger:
+      platform: event
+      event_type: esphome_start
+    action:
+      - light.turn_on: bedroom_light_1
+      - light.turn_on: bedroom_light_2
+      - light.apply_effect: random_color
+
+# In this example, we are using the GlobalValue component to define a global variable named current_color that stores the current color of the light effect. The current_color variable is of type color, which means it can store a value of type Color.
+# We are also using the lambda field in the light component to specify a piece of C++ code that is executed when the light is turned on. The code uses the add_on_value_callback method to register a callback that is executed whenever the value of the current_color variable changes. The callback sets the color of the light to the value of the current_color variable.
+# Finally, we are using the effect component to define a light effect that selects a random color from a list of predefined colors every 0.5 seconds, and sets the value of the current_color variable to the selected color. The effect is started using an automation that triggers when the ESPHome device starts up.
+# This configuration will cause both the Bedroom Light 1 and Bedroom Light 2 lights to show the same color, as specified by the current_color variable. The lights will change to a new

@@ -1,0 +1,11 @@
+# ESP32-C3 (single-core RISC-V): Treatlife SS01 3-way (ESP32-C3-12F), ZY-M100 mmWave sensors.
+# Built with ESPHome's native ESP-IDF toolchain (the old platformio flash_mode option is ignored there).
+esp32:
+  variant: ESP32C3
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf
+    version: recommended
+
+packages:
+  base: !include ../base.yaml

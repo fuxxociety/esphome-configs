@@ -1,0 +1,66 @@
+---
+substitutions:
+  nameprefix: 'bulb-'  # bulb
+  namesuffix: ''        # Empty string for top config to overwrite
+  friendly_number: ''     # Empty string for top config to overwrite
+  bulb_id: 'kauf_light'
+
+  sub_red_pin:    GPIO4
+  sub_green_pin:  GPIO12
+  sub_blue_pin:   GPIO14
+  sub_cw_pin:     GPIO5
+  sub_ww_pin:     GPIO13
+
+packages:
+  esp: !include ../modules/ESP8285.yaml
+  apicolor: !include light-effects/effects_script_kauftest.yaml
+
+# https://esphome.io/components/esphome.html
+esphome:
+  project:
+    name: "Kauf.RGBWW"
+    version: "1.87(m)"
+
+# PWM outputs for each LED channel
+# https://esphome.io/components/output/esp8266_pwm.html
+output:
+  - platform: esp8266_pwm
+    pin: $sub_red_pin
+    frequency: 200 Hz
+    id: pwm_red
+    max_power: .85
+  - platform: esp8266_pwm
+    pin: $sub_green_pin
+    frequency: 200 Hz
+    id: pwm_green
+    max_power: .85
+  - platform: esp8266_pwm
+    pin: $sub_blue_pin
+    frequency: 200 Hz
+    id: pwm_blue
+    max_power: .85
+  - platform: esp8266_pwm
+    pin: $sub_cw_pin
+    frequency: 400 Hz
+    id: pwm_cw
+    max_power: .85
+  - platform: esp8266_pwm
+    pin: $sub_ww_pin
+    frequency: 400 Hz
+    id: pwm_ww
+    max_power: .85
+
+# https://esphome.io/components/light/index.html
+light:
+  - platform: rgbww
+    name: ${servicename}
+    id: ${bulb_id}
+    red: pwm_red
+    green: pwm_green
+    blue: pwm_blue
+    cold_white: pwm_cw
+    warm_white: pwm_ww
+    cold_white_color_temperature: 6500 K
+    warm_white_color_temperature: 2700 K
+    # constant_brightness: true
+    color_interlock: true

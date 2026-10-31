@@ -1,0 +1,83 @@
+# DIY 5-channel PWM light controller on an ESP-WROOM-32 (the living room grow lights). Each channel is a
+# brightness-only light on its own pin (common/light/pwm-channel.yaml); BLE tracker + active Bluetooth proxy.
+# Buttons: onboard GPIO0 through the shared gesture engine (events only), external momentary switch GPIO33.
+#
+# Device file:
+#   substitutions: {name: light-livingroom-grow, friendly_name: Living Room Grow, room_key: livingroom_grow}
+#   packages:      {device: !include templates/diy/esp32-pwm-5ch.yaml}
+# Pins / channel names / restore modes can be overridden with ch<N>_pin, ch<N>_name, ch<N>_restore.
+substitutions:
+  device_description: DIY 5-channel PWM light controller (ESP32)
+  ch1_pin: GPIO19
+  ch2_pin: GPIO18
+  ch3_pin: GPIO17
+  ch4_pin: GPIO16
+  ch5_pin: GPIO4
+  ch1_name: GPIO19
+  ch2_name: GPIO18
+  ch3_name: GPIO17
+  ch4_name: GPIO16
+  ch5_name: GPIO4
+  ch1_restore: RESTORE_AND_ON
+  ch2_restore: RESTORE_AND_ON
+  ch3_restore: RESTORE_AND_ON
+  ch4_restore: RESTORE_AND_ON
+  ch5_restore: RESTORE_AND_ON
+  button_pin: GPIO0
+  ext_button_pin: GPIO33
+  status_led_id: status_led
+
+packages:
+  platform: !include ../../common/platforms/esp32.yaml
+  ble: !include ../../common/bluetooth/proxy.yaml
+  button: !include ../../common/button/multiclick.yaml
+  ch1: !include {file: ../../common/light/pwm-channel.yaml, vars: {ch: '1', ch_pin: '${ch1_pin}', ch_name: '${ch1_name}', ch_restore: '${ch1_restore}'}}
+  ch2: !include {file: ../../common/light/pwm-channel.yaml, vars: {ch: '2', ch_pin: '${ch2_pin}', ch_name: '${ch2_name}', ch_restore: '${ch2_restore}'}}
+  ch3: !include {file: ../../common/light/pwm-channel.yaml, vars: {ch: '3', ch_pin: '${ch3_pin}', ch_name: '${ch3_name}', ch_restore: '${ch3_restore}'}}
+  ch4: !include {file: ../../common/light/pwm-channel.yaml, vars: {ch: '4', ch_pin: '${ch4_pin}', ch_name: '${ch4_name}', ch_restore: '${ch4_restore}'}}
+  ch5: !include {file: ../../common/light/pwm-channel.yaml, vars: {ch: '5', ch_pin: '${ch5_pin}', ch_name: '${ch5_name}', ch_restore: '${ch5_restore}'}}
+
+binary_sensor:
+  - platform: gpio
+    id: ext_button
+    name: External Button
+    pin:
+      number: ${ext_button_pin}
+      mode: INPUT_PULLUP
+      inverted: true
+
+output:
+  # the board has no status LED; hold feedback drives this placeholder
+  - {platform: template, id: bb_status_led, type: float, write_action: [lambda: return;]}
+
+light:
+  - platform: monochromatic
+    id: status_led
+    output: bb_status_led
+    internal: true
+
+script:
+  - id: led_restore
+    then:
+      - light.turn_off: status_led
+  # the onboard button only reports to HA (as before: every action was unmapped)
+  - id: gesture_single
+    then:
+      - lambda: id(ev_mode) = "Switched";
+      - script.execute: event_single
+  - id: gesture_double
+    then:
+      - lambda: id(ev_mode) = "Switched";
+      - script.execute: event_double
+  - id: gesture_quad
+    then:
+      - lambda: id(ev_mode) = "Switched";
+      - script.execute: event_quad
+  - id: gesture_hold
+    then:
+      - lambda: id(ev_mode) = "Switched";
+      - script.execute: event_hold
+  - id: gesture_mode
+    then:
+      - lambda: id(ev_mode) = "Switched";
+      - script.execute: event_switchmode

@@ -1,0 +1,4 @@
+id: global_press_time
+type: int
+restore_value: no
+initial_value: '0'

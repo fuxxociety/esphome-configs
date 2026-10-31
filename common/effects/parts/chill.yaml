@@ -1,0 +1,2 @@
+# was a lambda: random colour, 55 s fade, every 70 s
+random: {name: Chill Mode, transition_length: 55s, update_interval: 70s}

@@ -1,0 +1,14 @@
+---
+# Uptime (as boot timestamp)
+#
+# Restored for the 2026 migration: the 2024.x fleet exposes "<friendly_name><namesuffix> Uptime"
+# (device_class timestamp) from a common file that was no longer in the tree.
+#
+# https://esphome.io/components/sensor/uptime.html
+#
+substitutions:
+  # most of the fleet; some older builds omit the suffix (override per device)
+  uptime_name: "${friendly_name}${namesuffix} Uptime"
+
+sensor:
+  - <<: !include ../sensors/uptime.yaml

@@ -1,0 +1,170 @@
+---
+# Treatlife RGB Bulb - Model SL-10
+# New style, with CB8P wireless module
+substitutions:
+  nameprefix: 'bulb-'
+
+  appliance_name: Treatlife.SL-10
+  esp_module_type: 'Tuya CB8P'
+
+  disable_entities:  "true"    # set to "false" to have all entities show up in Home Assistant automatically
+
+  sub_red_pin: 'P7'
+  sub_green_pin: 'P8'
+  sub_blue_pin: 'P9'
+  sub_white_pin: 'P24'
+
+  sub_on_turn_on:  script_do_nothing
+  sub_on_turn_off: script_do_nothing
+
+  bulb_id: 'bulb1'
+
+packages:
+  common: !include ../modules/BK7231N.yaml
+  colorscript: !include light-effects/effects_script_white.yaml
+
+esphome:
+  project:
+    name: $appliance_name
+    version: $esp_module_type
+
+# PWM outputs for each LED channel
+# https://esphome.io/components/output/esp8266_pwm.html
+output:
+  - platform: libretiny_pwm
+    pin: ${sub_red_pin}
+    frequency: 200 Hz
+    id: output_red
+    max_power: .85
+  - platform: libretiny_pwm
+    pin: ${sub_green_pin}
+    frequency: 200 Hz
+    id: output_green
+    max_power: .85
+  - platform: libretiny_pwm
+    pin: ${sub_blue_pin}
+    frequency: 200 Hz
+    id: output_blue
+    max_power: .85
+  - platform: libretiny_pwm
+    pin: ${sub_white_pin}
+    frequency: 400 Hz
+    id: output_white
+    max_power: .85
+
+# https://esphome.io/components/light/index.html
+light:
+  # Main RGBW light
+  - platform: rgbw
+    name: ${servicename}
+    default_transition_length: 250ms
+    id: ${bulb_id}
+    red: output_red
+    green: output_green
+    blue: output_blue
+    white: output_white
+    color_interlock: true
+    restore_mode: $light_restore_mode
+    on_turn_on:
+      - homeassistant.event:
+          event: esphome.light
+          data:
+            device_id: '${system_name}'
+            action: 'on'
+      - script.execute: $sub_on_turn_on
+    on_turn_off:
+      - homeassistant.event:
+          event: esphome.light
+          data:
+            device_id: '${system_name}'
+            action: 'off'
+      - script.execute: $sub_on_turn_off
+    effects: !include light-effects/effects_rgbw.yaml
+
+#select:
+  # default light state on boot
+#  - platform: template
+#    name: ${friendly_name}${namesuffix} Power On State (Disabled)
+#    id: select_boot_state
+#    optimistic: true
+#    options:
+#      - "Restore Power Off State"
+#      - "Always On - Last Value"
+#      - "Always On - Bright White"
+#      - "Always Off"
+#      - "YAML Configured ($light_restore_mode)"
+#    # defaulting to always on is nice so you know new bulbs are working
+#    initial_option: $default_power_on_state
+#    restore_value: true
+#    icon: mdi:restart-alert
+# save_remote_values() is a kauf-supplied function
+#    on_value:
+#      - lambda: |-
+#          if ( x == "Restore Power Off State")
+#            ${bulb_id}->set_restore_mode(LIGHT_RESTORE_DEFAULT_OFF);
+#          else if ( x == "Always On - Last Value")
+#            ${bulb_id}->set_restore_mode(LIGHT_RESTORE_AND_ON);
+#          else if ( x == "Always On - Bright White")
+#            ${bulb_id}->set_restore_mode(LIGHT_ALWAYS_ON);
+#          else if ( x == "Always Off")
+#            ${bulb_id}->set_restore_mode(LIGHT_RESTORE_AND_OFF);
+#          else
+#            ${bulb_id}->set_restore_mode(LIGHT_$light_restore_mode);
+#          ${bulb_id}->save_remote_values_();
+#      - script.execute: script_save_changes
+#    entity_category: config
+
+# https://esphome.io/components/number/index.html
+# https://esphome.io/components/number/template.html
+#number:      # set max power output for PWMs
+#  - platform: template
+#    name: ${friendly_name}${namesuffix} Max Power (Disabled)
+#    min_value: 1
+#    max_value: 100
+#    step: 1
+#    initial_value: 85
+#    id: number_max_power
+#    entity_category: config
+#    disabled_by_default: $disable_entities
+#    icon: mdi:brightness-percent
+#    optimistic: true
+#    restore_value: true
+#    unit_of_measurement: "%"
+#    mode: box
+#    on_value:
+#      - lambda: |-
+#          float new_power = ((float)x)/100.0f;
+#          id(pwm_red).set_max_power(new_power);
+#          id(pwm_green).set_max_power(new_power);
+#          id(pwm_blue).set_max_power(new_power);
+#          id(pwm_white).set_max_power(new_power);
+#          id(${bulb_id})->set_next_write();
+#      - script.execute: script_save_changes
+#  - platform: template
+#    name: ${friendly_name} Bulb${namesuffix} Default Fade
+#    min_value: 0
+#    max_value: 5000
+#    step: 50
+#    initial_value: 250
+#    id: number_default_fade
+#    entity_category: config
+#    icon: mdi:timer-outline
+#    optimistic: true
+#    restore_value: true
+#    unit_of_measurement: "ms"
+#    mode: box
+#    on_value:
+#      - lambda: id(${bulb_id})->set_default_transition_length(x);
+#      - script.execute: script_save_changes
+
+# https://esphome.io/guides/automations.html#script-component
+script:
+  - id: script_save_changes
+    mode: restart
+    then:
+      - delay: 3s
+      - lambda: global_preferences->sync();
+
+  - id: script_do_nothing
+    then:
+      lambda: return;

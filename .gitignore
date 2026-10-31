@@ -1,0 +1,30 @@
+# Gitignore settings for ESPHome
+# This is an example and may include too much for your use-case.
+# You can modify this file to suit your needs.
+/.esphome/
+/secrets.yaml
+# Device Builder local state (peer-link key is private)
+/.device-builder-peer-link-key.bin
+/.device-builder.json.lock
+__pycache__/
+
+# Local only, never published: old configs with inline secrets (replaced by the new layout; kept for rollback
+# builds until cut-over) and the nested Kauf clone
+/fan-breadboard.yaml
+/front-entry-2.yaml
+/front-porch.yaml
+/kauf-bulb-30288a.yaml
+/kauf-bulb-302e9a.yaml
+/kauf-bulb-304cc4.yaml
+/kauf-bulb-302342.yaml
+/livingroom-growlights.yaml
+/masterbed-shelf.yaml
+/office-ceiling-fan.yaml
+/office-closet.yaml
+/plug-masterbedroom-fan.yaml
+/test-switch-2.yaml
+/test-switch.yaml
+/fan-mbrpedestal.yaml
+/reference/garage-sconce.yaml
+/reference/masterbath-shower-fixture.yaml
+/kauf-rgbww-bulbs/

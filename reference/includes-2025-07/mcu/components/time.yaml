@@ -1,0 +1,18 @@
+---
+substitutions:
+  time_zone: "America/Chicago"
+# Time
+# The time component utilizes real time clock time sources for ESPHome.
+# https://esphome.io/components/time.html
+
+time:
+    # Use Home Assistant to periodically synchronize the current time.
+    # https://esphome.io/components/time.html#home-assistant-time-source
+  - platform: homeassistant
+    id: time_homeassistant
+    timezone: ${time_zone}
+
+    # Use a SNTP server to periodically synchronize the current time.
+    # https://esphome.io/components/time.html#sntp-time-source
+  - platform: sntp
+    timezone: ${time_zone}

@@ -1,0 +1,20 @@
+# EXAMPLE CONFIG FOR MULTI-CLICK FILES
+# It's suggested to NOT use this file directly, but better to
+# include these entities in the root yaml.
+---
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO13
+      mode: INPUT_PULLUP
+    id: raw_switch_state
+    internal: true
+    filters:
+      - invert:
+      - delayed_on: 10ms
+      - delayed_off: 10ms
+    on_multi_click:
+      - <<: !include multi-click/on-multi-click.yaml
+
+text_sensor:
+  - <<: !include multi-click/text-sensor.yaml

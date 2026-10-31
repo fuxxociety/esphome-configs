@@ -1,0 +1,14 @@
+substitutions:
+  system_name: craftroom-closet   # device hostname = live name (ESPHome 2026 migration)
+  nameprefix: 'switch-'   # device hostname = live name (ESPHome 2026 migration)
+  device_name: craftroom-closet      # **** CHANGE DEVICE NAME TO SOMETHING UNIQUE PER DEVICE.  RENAME YAML FILE TO SAME NAME.    ****
+  device_number: ""                 # trailing number for multiple devices in a fixture
+                                     # **** USE DASHES (-) INSTEAD OF SPACES OR UNDERSCORE (_).  USE ONLY LOWER CASE LETTERS.     ****
+  friendly_name: Craftroom Closet    # **** CHANGE FRIENDLY NAME TO SOMETHING UNIQUE PER DEVICE                                   ****
+
+  disable_entities:  "true"     # set to "false" to have all entities show up in Home Assistant automatically
+  disable_webserver: "false"    # set to "true" to disable the webserver listening on port 80.
+
+packages:
+  # SS01S package includes modules/ESP8266.yaml itself
+  sw: !include devices/treatlife-ss01s-events.yaml

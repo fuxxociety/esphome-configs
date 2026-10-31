@@ -1,0 +1,10 @@
+substitutions:
+  name: light-masterbath-shower
+  friendly_name: Master Bath Shower Fixture
+  room_key: masterbath_shower
+  cw_pin: GPIO5
+  ww_pin: GPIO4
+  ring_leds: '60'
+
+packages:
+  device: !include templates/fixture/rgb-cww.yaml

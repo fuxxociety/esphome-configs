@@ -1,0 +1,6 @@
+# Beken BK7231N (Tuya CB-series modules): Treatlife SL10 CB8P, LightingInside bulbs, smart plugs.
+bk72xx:
+  board: generic-bk7231n-qfn32-tuya
+
+packages:
+  base: !include ../base.yaml

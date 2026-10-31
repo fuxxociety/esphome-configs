@@ -1,0 +1,133 @@
+---
+substitutions:
+  nameprefix: "motion-"
+  namesuffix: ""
+  friendly_name: "Tuya ZY-M100 Human Prescence Sensor"
+  device_description: "Tuya ZY-M100 Human Prescence Sensor"
+
+  appliance_name: Tuya.ZY-M100
+  appliance_model: "ESP-12F"
+
+packages:
+  esp: !include ../modules/ESP8266.yaml
+
+esp8266:
+  restore_from_flash: true
+  early_pin_init: false
+
+esphome:
+  project:
+    name: $appliance_name
+    version: $appliance_model
+
+ota:
+  - id: !extend my_ota
+    on_error:
+      then:
+        - button.press: restart_button
+
+logger:
+
+uart:
+  # Default ESP-12E RX pin
+  rx_pin: GPIO03
+  # Default ESP-12E TX pin
+  tx_pin: GPIO01
+  baud_rate: 115200
+
+# Register the Tuya MCU connection
+tuya:
+
+sensor:
+    # Light Sensor
+  - platform: tuya
+    name: "${friendly_name} Light Intensity"
+    id: light_intensity
+    sensor_datapoint: 104
+    unit_of_measurement: "lux"
+    icon: "mdi:brightness-5"
+    device_class: "illuminance"
+    state_class: "measurement"
+    # Distance from Detected Object
+  - platform: "tuya"
+    name: "${friendly_name} Target Distance"
+    id: target_distance
+    sensor_datapoint: 9
+    unit_of_measurement: "cm"
+    icon: "mdi:eye"
+    device_class: "distance"
+    state_class: "measurement"
+
+number:
+    # Sensitivity
+  - platform: "tuya"
+    name: "${friendly_name} Sensitivity"
+    number_datapoint: 2
+    min_value: 0
+    max_value: 9
+    step: 1
+    icon: "mdi:ray-vertex"
+    # Min Detection Distance
+  - platform: "tuya"
+    name: "${friendly_name} Near Detection"
+    number_datapoint: 3
+    min_value: 0
+    max_value: 1000
+    step: 1
+    mode: slider
+    unit_of_measurement: "cm"
+    icon: "mdi:signal-distance-variant"
+    # Max Detection Distance
+  - platform: "tuya"
+    name: "${friendly_name} Far Detection"
+    number_datapoint: 4
+    min_value: 0
+    max_value: 1000
+    step: 1
+    mode: slider
+    unit_of_measurement: "cm"
+    icon: "mdi:signal-distance-variant"
+    # Detection Delay
+  - platform: "tuya"
+    name: "${friendly_name} Detection Delay"
+    number_datapoint: 101
+    min_value: 0
+    max_value: 100
+    step: 1
+    unit_of_measurement: "s"
+    mode: slider
+    icon: "mdi:clock"
+    # Fading Time - Cool Down Period
+  - platform: "tuya"
+    name: "${friendly_name} Fading Time"
+    number_datapoint: 102
+    min_value: 0
+    max_value: 1500
+    step: 1
+    unit_of_measurement: "s"
+    mode: slider
+    icon: "mdi:clock"
+
+select:
+    # Self Check Enum
+  - platform: "tuya"
+    name: "${friendly_name} Self Check Result"
+    icon: mdi:eye
+    enum_datapoint: 6
+    options:
+      0: Checking
+      1: Check Success
+      2: Check Failure
+      3: Others
+      4: Comm Fault
+      5: Radar Fault
+
+binary_sensor:
+    # Status
+  - platform: status
+    name: "${friendly_name} Status"
+    # Occupancy Binary Sensor
+  - platform: "tuya"
+    name: "${friendly_name} Presence State"
+    sensor_datapoint: 1
+    device_class: occupancy

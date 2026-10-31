@@ -1,0 +1,9 @@
+strobe:
+  name: Lightning
+  colors:
+    - {state: true, brightness: 100%, duration: 50ms}
+    - {state: false, duration: 50ms}
+    - {state: true, brightness: 100%, duration: 160ms}
+    - {state: false, duration: 50ms}
+    - {state: true, brightness: 100%, duration: 50ms}
+    - {state: false, duration: 3000ms}

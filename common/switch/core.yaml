@@ -1,0 +1,209 @@
+# Every relay device with a physical button that behaves like a wall switch: Treatlife SS01S, the wash-light plugs
+# (Enbrighten WFD4105, Sengled B1C-NB7), the Minoston appliance plugs. Relay modes, power-loss and HA-outage rules,
+# No HASS, the shared gesture engine and its events (BEHAVIOR.md §0.5, §2, §5). Hardware-, load- and LED-independent.
+#
+# A device template combines:  hardware (pins, platform)  +  this core  +  one LOAD  +  one LED policy
+#   loads:        common/switch/load-smart-light.yaml | load-light.yaml | load-fan.yaml | load-switch.yaml
+#   LED policies: common/switch/led-onoff.yaml (wall switches) | led-modes.yaml (Minoston appliance plugs)
+#
+# The HARDWARE template must: include a common/platforms/<chip>.yaml, set button_pin (and button_debounce if the
+# button bounces), and define outputs relay_output (binary), status_led_output and error_led_output (float; a
+# template no-op output where the board has no such LED).
+#
+# The LED policy must define scripts copy_vals (show the load on the status LED) and led_restore.
+#
+# The LOAD (common/switch/load-*.yaml) must:
+#   - keep globals load_on (bool) and load_level (0..1, shown on the LED in smart mode) current, and on every load
+#     change execute relay_apply, copy_vals and event_switch_on / event_switch_off
+#   - define scripts load_force_off (turn the load entity off, used after a power-on reset) and gesture_single
+#
+# Relay Config is the *preferred* mode. The *effective* mode is Switched while ha_fallback is set
+# (after a power-on reset until HA connects, or after ha_offline_revert_ms without HA in Always On):
+#   Switched    the load is the relay: presses toggle it locally, events still go to HA
+#   Always On   HA drives the load (smart bulbs); the relay is energised only by a press or by HA turning the load
+#               entity on, never by itself, and never opened by it
+#   Always Off  relay open
+substitutions:
+  status_led_id: status_led
+  # never reboot just because HA is away; No HASS off re-enables a 15 min reboot (as 2025.x)
+  api_reboot_timeout: 0s
+  ha_offline_revert_ms: '1800000'
+  # after utility power returns: 'true' = relay open (wall switches, lamps; BEHAVIOR.md §0.5),
+  # 'false' = relay restored to its state before the outage (appliance plugs: dishwasher, dryer, washer)
+  power_loss_open_relay: 'true'
+
+packages:
+  button: !include ../button/multiclick.yaml
+
+esphome:
+  on_boot:
+      # after outputs/globals/light restore, before Wi-Fi
+    - priority: 600
+      then:
+        - lambda: |-
+            if (fleet::power_on_reset() && ${power_loss_open_relay}) {
+              // utility power returned: relay open, load off; smart mode waits for HA (Switched until it connects)
+              id(relay_on) = false;
+              id(relay_output).turn_off();
+              id(load_force_off).execute();
+              id(ha_fallback) = id(relay_config).current_option() == "Always On";
+              ESP_LOGI("power", "power-on reset: relay open, fallback=%d", id(ha_fallback));
+            } else {
+              // software/watchdog/OTA reboot (or power-on with power_loss_open_relay 'false'): put the relay back
+              if (id(relay_on)) id(relay_output).turn_on(); else id(relay_output).turn_off();
+              ESP_LOGI("power", "relay restored to %d", id(relay_on));
+            }
+        - script.execute: copy_vals
+
+globals:
+  - id: relay_on              # last commanded relay state; restored on software reboots only (see on_boot)
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  - id: ha_fallback           # effective mode forced to Switched
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: api_lost_at
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: load_on               # maintained by the load template
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: load_level
+    type: float
+    restore_value: false
+    initial_value: '1.0'
+
+# relay_output, status_led_output, error_led_output come from the hardware template
+
+light:
+  - platform: monochromatic
+    id: status_led
+    name: Status LED
+    output: status_led_output
+    default_transition_length: 333ms
+    disabled_by_default: true
+  - platform: monochromatic
+    id: error_led
+    name: Error LED
+    output: error_led_output
+    default_transition_length: 0s
+    disabled_by_default: true
+
+select:
+  - platform: template
+    id: relay_config
+    name: Relay Config
+    icon: mdi:progress-question
+    entity_category: config
+    options: [Switched, Always On, Always Off]
+    initial_option: Switched
+    optimistic: true
+    restore_value: true
+    on_value:
+      - script.execute: relay_apply
+      - script.execute: copy_vals
+
+switch:
+  - platform: template
+    id: no_hass
+    name: No HASS
+    icon: mdi:toggle-switch-off-outline
+    entity_category: config
+    disabled_by_default: ${disable_entities}
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_on:
+      - lambda: id(api_server)->set_reboot_timeout(0);
+    on_turn_off:
+      - lambda: id(api_server)->set_reboot_timeout(900000);
+
+interval:
+  # HA watch: the power-on fallback ends when HA connects; Always On falls back after ha_offline_revert_ms without HA
+  - interval: 10s
+    then:
+      - lambda: |-
+          if (id(api_server)->is_connected()) {
+            id(api_lost_at) = 0;
+            if (id(ha_fallback)) {
+              id(ha_fallback) = false;          // back to the preferred mode; the relay stays as the user left it
+              ESP_LOGI("mode", "HA connected: fallback cleared");
+              id(copy_vals).execute();
+            }
+          } else {
+            if (id(api_lost_at) == 0) id(api_lost_at) = millis();
+            if (!id(ha_fallback) && id(relay_config).current_option() == "Always On" &&
+                millis() - id(api_lost_at) >= ${ha_offline_revert_ms}) {
+              id(ha_fallback) = true;           // relay keeps its state, the button now toggles it
+              ESP_LOGW("mode", "HA gone for %u ms: falling back to Switched", millis() - id(api_lost_at));
+              id(copy_vals).execute();
+            }
+          }
+
+script:
+  # Put the relay where the effective mode says. Called on every load change and mode change.
+  - id: relay_apply
+    mode: queued
+    then:
+      - lambda: |-
+          const auto pref = id(relay_config).current_option();
+          bool want = id(relay_on);
+          if (pref == "Always Off") {
+            want = false;
+          } else if (id(ha_fallback) || pref == "Switched") {
+            want = id(load_on);
+          } else if (id(load_on)) {
+            want = true;                        // Always On: energise when the load is turned on, never de-energise
+          }
+          if (want != id(relay_on)) ESP_LOGI("relay", "%s", want ? "energise" : "open");
+          id(relay_on) = want;
+          if (want) id(relay_output).turn_on(); else id(relay_output).turn_off();
+
+  # double / quad / hold: event only, for every load
+  - id: gesture_double
+    then:
+      - lambda: id(ev_mode) = id(relay_config).current_option().str();
+      - script.execute: event_double
+  - id: gesture_quad
+    then:
+      - lambda: id(ev_mode) = id(relay_config).current_option().str();
+      - script.execute: event_quad
+  - id: gesture_hold
+    then:
+      - lambda: id(ev_mode) = id(relay_config).current_option().str();
+      - script.execute: event_hold
+
+  # 3–10 s hold: Switched ↔ Always On, on every switch (BEHAVIOR.md: no lock-out). Never energises the relay.
+  - id: gesture_mode
+    then:
+      - lambda: |-
+          const bool to_smart = id(relay_config).current_option() != "Always On";
+          id(relay_config).make_call().set_option(to_smart ? "Always On" : "Switched").perform();
+          id(ev_mode) = to_smart ? "Always On" : "Switched";
+          ESP_LOGI("mode", "button: Relay Config -> %s", id(ev_mode).c_str());
+      - script.execute: event_switchmode
+
+  # today's "Wall Switch Single-Press…" also listens for esphome.switch switch_on/switch_off
+  - id: event_switch_on
+    then:
+      - homeassistant.event:
+          event: esphome.switch
+          data:
+            devicename: ${room_key}
+            room: ${room_key}
+            name_friendly: ${friendly_name}
+            action: switch_on
+            mode: !lambda return id(relay_config).current_option().str();
+  - id: event_switch_off
+    then:
+      - homeassistant.event:
+          event: esphome.switch
+          data:
+            devicename: ${room_key}
+            room: ${room_key}
+            name_friendly: ${friendly_name}
+            action: switch_off
+            mode: !lambda return id(relay_config).current_option().str();

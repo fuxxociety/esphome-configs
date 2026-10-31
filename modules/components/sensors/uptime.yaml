@@ -1,0 +1,5 @@
+platform: uptime
+id: sensor_uptime
+name: "${uptime_name}"
+type: timestamp
+entity_category: diagnostic

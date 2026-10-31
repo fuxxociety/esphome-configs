@@ -1,0 +1,2 @@
+# brightness only (the old "randomflicker" lambda passed a float in -1..1 as a transition length)
+flicker: {name: Random Flicker, alpha: 90%, intensity: 10%}

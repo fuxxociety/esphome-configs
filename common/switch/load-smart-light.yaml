@@ -1,0 +1,109 @@
+# Load for common/switch/core.yaml: a wall switch for a ROOM'S LIGHTS, which may be smart bulbs (BEHAVIOR.md §0, §2).
+# Entities: the room's light (virtual rgbww, name = device name) and the Brightness step select.
+#
+# Switched: the light is the relay. Always On (smart bulbs): a press steps bright→medium→low→night→off and tells HA;
+# HA applies the step to light.group_<room_key> and mirrors the group back onto this light, whose brightness the
+# status LED shows.
+substitutions:
+  # smart-mode step window: presses within this keep stepping, after it a press toggles
+  step_window: 8s
+
+output:
+  # the room light has no hardware of its own
+  - {platform: template, id: bb_red, type: float, write_action: [lambda: return;]}
+  - {platform: template, id: bb_green, type: float, write_action: [lambda: return;]}
+  - {platform: template, id: bb_blue, type: float, write_action: [lambda: return;]}
+  - {platform: template, id: bb_cold, type: float, write_action: [lambda: return;]}
+  - {platform: template, id: bb_warm, type: float, write_action: [lambda: return;]}
+
+light:
+  # Exposes every bulb capability (BEHAVIOR.md §2) so HA can mirror light.group_<room_key> onto it.
+  - platform: rgbww
+    id: main_light
+    name: None
+    red: bb_red
+    green: bb_green
+    blue: bb_blue
+    cold_white: bb_cold
+    warm_white: bb_warm
+    cold_white_color_temperature: 6500 K
+    warm_white_color_temperature: 2700 K
+    color_interlock: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    default_transition_length: 0s
+    on_turn_on:
+      - lambda: id(load_on) = true;
+      - script.execute: relay_apply
+      - script.execute: event_switch_on
+    on_turn_off:
+      - lambda: id(load_on) = false;
+      - script.execute: relay_apply
+      - script.execute: event_switch_off
+    on_state:
+      - lambda: |-
+          id(load_on) = id(main_light).current_values.is_on();
+          id(load_level) = id(main_light).current_values.get_brightness();
+      - script.execute: copy_vals
+
+select:
+  # the smart-mode step last chosen; sent to HA as `brightness` (single_press_global applies it to the group)
+  - platform: template
+    id: brightness_step
+    name: Brightness
+    icon: mdi:brightness-6
+    options: ['off', bright, medium, low, night]
+    initial_option: 'off'
+    optimistic: true
+    restore_value: false
+
+script:
+  - id: load_force_off
+    then:
+      - light.turn_off: {id: main_light, transition_length: 0s}
+
+  - id: step_window_timer
+    mode: restart
+    then:
+      - delay: ${step_window}
+
+  - id: gesture_single
+    then:
+      - lambda: |-
+          static const char *const STEPS[] = {"bright", "medium", "low", "night", "off"};
+          auto *light = id(main_light);
+          const auto &v = light->current_values;
+          const bool smart = !id(ha_fallback) && id(relay_config).current_option() == "Always On";
+          std::string next;
+          if (!smart) {
+            next = id(relay_on) ? "off" : "bright";            // Switched/fallback: the relay is the truth
+          } else if (!id(relay_on)) {
+            next = "bright";                                   // bulbs unpowered: energising brings them up at 100 %
+          } else if (id(step_window_timer).is_running() && v.is_on()) {
+            // continue from where the bulbs actually are (mirrored onto this light by HA), not a private counter
+            std::string cur = v.get_color_mode() == ColorMode::RGB ? "night"
+                            : v.get_brightness() >= 0.83f ? "bright"
+                            : v.get_brightness() >= 0.5f ? "medium" : "low";
+            for (int i = 0; i < 4; i++) if (cur == STEPS[i]) { next = STEPS[i + 1]; break; }
+          } else {
+            next = v.is_on() ? "off" : "bright";
+          }
+          id(brightness_step).make_call().set_option(next).perform();
+          if (next == "off") {
+            light->turn_off().perform();
+          } else {
+            auto call = light->turn_on();
+            if (next == "night") {
+              call.set_color_mode(ColorMode::RGB);
+              call.set_rgb(1.0f, 0.04f, 0.725f);               // single_press_global night: rgb(255, 10, 185)
+              call.set_brightness(1.0f);
+            } else {
+              call.set_color_mode(ColorMode::COLD_WARM_WHITE);
+              call.set_color_temperature(300);                 // single_press_global: color_temp 300
+              call.set_brightness(next == "bright" ? 1.0f : next == "medium" ? 0.66f : 0.33f);
+            }
+            call.perform();
+          }
+          id(ev_mode) = smart ? "Always On" : "Switched";
+          id(ev_brightness) = next;
+      - script.execute: step_window_timer
+      - script.execute: event_single

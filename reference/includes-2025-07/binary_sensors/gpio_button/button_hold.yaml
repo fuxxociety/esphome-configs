@@ -1,0 +1,9 @@
+---
+# definition for holding
+timing:
+  - ON for at least $sub_hold_time
+then:
+  - logger.log: "Detected Hold"
+  - lambda: |-
+      id(script_hass_toggle_short_hold).execute();
+      id($sub_on_short_hold).execute();
