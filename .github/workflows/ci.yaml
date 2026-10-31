@@ -14,10 +14,9 @@ jobs:
   yamllint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: pip install yamllint
-      # Legacy trees (modules/, devices/, ...) have ~600 cosmetic errors and are deleted at
-      # cut-over; until then lint only the new layout. Widen to `.` in Phase 6.
+      # Lint the new layout only; legacy/ and reference/ are kept as they were (not built).
       - run: |
           paths=$(ls -d common templates .github 2>/dev/null)
           yamllint --no-warnings $paths
@@ -28,7 +27,7 @@ jobs:
     outputs:
       files: ${{ steps.files.outputs.files }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - id: files
         # Top-level device configs only; shared files live in common/ and templates/.
         # Configs deliberately parked with a top-level `invalid:` key are skipped.
@@ -44,8 +43,8 @@ jobs:
       matrix:
         file: ${{ fromJson(needs.prepare.outputs.files) }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       # Keep in step with ../requirements.txt in the tooling repo
