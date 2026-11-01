@@ -13,7 +13,10 @@ static const uint16_t SPEED_JUMP = 0b110110000100;
 static const uint16_t SPEED_UP   = 0b110110010000;
 static const uint16_t SPEED_DOWN = 0b110110100000;
 
-static const uint8_t duty_to_speed[13] = {5, 13, 20, 28, 35, 42, 49, 56, 63, 70, 78, 90, 100};
+// Upper duty-cycle bound (%) of each speed 0..12 on the speed line. Calibrated on the master bedroom pedestal fan
+// (2026-11-01, measured: 1=18.4 2=25.6 3=33.6 4=39.6 5=47.6 6=54.4 7=61.6 8=68.4 9=75.6 10=83.6 11=90.4 12=100 %),
+// each bound midway between neighbours. ssieb's original {5, 13, 20, ... 78, 90, 100} read this fan one step high.
+static const float duty_to_speed[13] = {9.0f, 22.0f, 29.6f, 36.6f, 43.6f, 51.0f, 58.0f, 65.0f, 72.0f, 79.6f, 87.0f, 95.2f, 100.0f};
 
 void PedestalFan::setup() {
   this->traits_ = fan::FanTraits(true, true, false, 12);

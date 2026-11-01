@@ -1,0 +1,22 @@
+# Enbrighten WFD4105 smart plug, BK7231T variant, with a plain appliance switch as its load (plug-mason-spare).
+# Pin map read from the live device's own config dump (2026-11-01: relay P24, button P26 active low, status LED P7
+# active low): the same as the BK7231N unit in templates/enbrighten/wfd4105.yaml (craft room wash light), only the chip
+# and the load differ. The button behaves like every wall switch (common/switch/core.yaml, BEHAVIOR.md §5).
+substitutions:
+  device_description: Enbrighten WFD4105 smart plug (BK7231T)
+  relay_pin: P24
+  button_pin: P26
+  status_led_pin: P7
+  button_debounce: 100ms
+  load_restore_mode: RESTORE_DEFAULT_OFF
+
+packages:
+  platform: !include ../../common/platforms/bk7231t.yaml
+  core: !include ../../common/switch/core.yaml
+  led: !include ../../common/switch/led-onoff.yaml
+  load: !include ../../common/switch/load-switch.yaml
+
+output:
+  - {platform: gpio, id: relay_output, pin: '${relay_pin}'}
+  - {platform: libretiny_pwm, id: status_led_output, pin: '${status_led_pin}', frequency: 200 Hz, inverted: true}
+  - {platform: template, id: error_led_output, type: float, write_action: [lambda: return;]}

@@ -1,0 +1,30 @@
+# HA-side behaviour per room_key for the [v2] automations (../../tools/gen_ha_v2.py builds ha/v2.yaml from this,
+# naming/naming.yaml and naming/rename-map.csv). Carried over from the old per-room scripts (../logs/ha-room-scripts.yaml):
+#
+#   timer        timer.* started by a press that turns the room on, cancelled by a press that turns it off
+#   timer_off    when the timer finishes, turn the room off (old: Timer Expired (multiple))
+#   off_also     rooms turned off with this one (old: script.single_press_<room> → script.event_to_switch)
+#   on_script    script run 3 s after a press that turns the room on (old: single_press_fireplace)
+#   double       light/group toggled by a double press (BEHAVIOR.md, Naming: craft room → wash lights)
+#
+# Fixed while carrying over (old behaviour in brackets):
+#   laundryroom    timer.laundryroom_light   [script used timer.laundryroom, which doesn't exist: never started]
+#   *_vent         timers started by the press [script.single_press_vent read an undefined `ventname`: never started]
+# Not carried over:
+#   masterbath_vanity off_also (toilet, closet, shower)   [disabled in the old script]
+#   masterbath_toilet timer.masterbath_toilet              [doesn't exist; the old script was a no-op]
+rooms:
+  craftroom:              {off_also: [craftroom_closet], double: light.group_craftroom_wash}
+  masterbed:              {off_also: [masterbath_vanity]}
+  officeceiling:          {off_also: [office_closet]}
+  fireplace:              {on_script: script.energy_conserve}
+  laundryroom:            {timer: timer.laundryroom_light, timer_off: true}
+  upbath_toilet:          {timer: timer.upbath_toilet, timer_off: true}
+  upbath_vanity:          {timer: timer.upbath_vanity, timer_off: true}
+  upbath_vent:            {timer: timer.upbath_vent, timer_off: true}
+  downbath_vent:          {timer: timer.downbath_vent, timer_off: true}
+  # vents: every bathroom/shower vent turns off when its timer finishes (2026-11-01). The closet timer still
+  # only starts/cancels, as before.
+  masterbath_closet:      {timer: timer.masterbath_closet}
+  masterbath_shower_vent: {timer: timer.masterbath_shower_vent, timer_off: true}
+  masterbath_toilet_vent: {timer: timer.masterbath_toilet_vent, timer_off: true}

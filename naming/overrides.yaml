@@ -20,6 +20,11 @@
   friendly_name: Craft Room Wash 2
   room_key: craftroom_wash
 
+# plug-masterbedroom-fan (Enbrighten WFD4105, BK7231T, MAC 10:5a:17:b7:05:14, 10.10.32.100, ESPHome 2024.4.1): LIVE but
+# unused, empty by the window in Mason's room, never in HA (so no HA name to key an override by). The draft flagged it
+# stale; on 2026-11-01 it was included as plug-mason-spare ("Mason Spare Plug", room_key mason_spare), edited directly
+# in naming.yaml - re-apply that if the draft is regenerated.
+
 # Unreachable, retired (2026-10-31): left out of the refactor, HA entries untouched
 "Kauf-Bulb-302342": {retire: true}
 "Kauf-Bulb-30288A": {retire: true}

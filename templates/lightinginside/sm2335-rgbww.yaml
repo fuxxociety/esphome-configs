@@ -3,10 +3,23 @@
 substitutions:
   data_pin: P24
   clock_pin: P6
+  # 1 s, not 250 ms: on ESPHome 2026 / LibreTiny 1.13 a 250 ms fade from off to full white made the SM2335 latch up
+  # (LEDs frozen until power-cycled) or reset the bulb; 1 s passed 24/24 test steps (2026-10-31). The 2024.4 firmware
+  # ran 250 ms without trouble.
+  default_fade_ms: '1000'
 
 packages:
   platform: !include ../../common/platforms/bk7231n.yaml
   bulb: !include ../../common/light/bulb.yaml
+
+# components/sm10bit_base: ESPHome's driver minus the standby command. Added while chasing the latch-up above: the
+# frozen LEDs always followed off -> on, i.e. a wake from standby. Without standby the 250 ms fade still failed (the
+# bulb reset instead), so the 1 s fade is the fix; this stays as a precaution until an A/B test with the stock driver.
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [sm10bit_base]
 
 sm2335:
   data_pin: ${data_pin}
@@ -35,7 +48,7 @@ light:
     color_interlock: true
     constant_brightness: true
     restore_mode: RESTORE_DEFAULT_ON
-    default_transition_length: 250ms
+    default_transition_length: ${default_fade_ms}ms
     on_turn_on:
       - script.execute: bulb_event_on
     on_turn_off:

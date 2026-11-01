@@ -7,3 +7,8 @@ Changes for ESPHome 2026, nothing else: `fan/__init__.py` uses `fan.fan_schema(P
 (the old `fan.FAN_SCHEMA` / `CONF_OUTPUT_ID` API is gone). The C++ is unchanged.
 
 The previous local copy (modified, different logic) is kept in `reference/components-pedestal-local/`.
+
+## Local change 2026-11-01: speed calibration
+`duty_to_speed` recalibrated from the fan's measured speed-line duty per speed (see the comment in `fan/pedestal.cpp`).
+The upstream table reported this fan one speed too high at almost every step, so speed 11 showed as 12 (100 %) and
+IR speed changes, which are computed from the detected speed, landed one step off.

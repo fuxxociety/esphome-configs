@@ -1,0 +1,9 @@
+# Second office ceiling bulb (Treatlife SL-10 CB8P, MAC a0:92:08:aa:b7:63). Was bulb-officeceiling-1 (ESPHome
+# 2024.4.1), never added to HA and not in naming/naming.yaml; hand-written, mirrors bulb-office-2.yaml.
+substitutions:
+  name: bulb-office-1
+  friendly_name: Office 1
+  room_key: officeceiling
+
+packages:
+  device: !include templates/treatlife/sl10-cb8p.yaml

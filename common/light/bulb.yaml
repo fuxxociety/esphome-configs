@@ -3,6 +3,10 @@
 #
 # Power loss: utility power returning (or the wall switch's relay closing) brings the bulb up at 100 % neutral white,
 # so a bulb behind a dumb or fallen-back switch always works. A software reboot restores the previous state.
+substitutions:
+  # Default Fade's first value (ms); the bulb keeps any value set later. Templates may raise it (see sm2335-rgbww.yaml).
+  default_fade_ms: '250'
+
 esphome:
   on_boot:
     - priority: 600   # after the light restored its saved state, before Wi-Fi
@@ -37,7 +41,7 @@ number:
     min_value: 0
     max_value: 5000
     step: 50
-    initial_value: 250
+    initial_value: ${default_fade_ms}
     optimistic: true
     restore_value: true
     on_value:

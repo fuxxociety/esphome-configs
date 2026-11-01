@@ -367,7 +367,7 @@ devices:
   live: true
   flags: []
 - ha_name: Masterbath Closet Switch
-  mac: 58:bf:25:d9:e7:28
+  mac: a4:cf:12:f2:1e:43   # chip replaced 2026-11-01 (was 58:bf:25:d9:e7:28)
   hostname: switch-masterbath-closet
   class: ss01s
   configs:
@@ -1250,19 +1250,19 @@ devices:
   flags:
   - 'stale: will not use (retire list)'
 - ha_name: null
-  mac: null
+  mac: 10:5a:17:b7:05:14
   hostname: plug-masterbedroom-fan
-  class: other
+  class: plug_switch
   configs:
   - legacy/plug-masterbedroom-fan.yaml
   keep_config: legacy/plug-masterbedroom-fan.yaml
-  new_hostname: plug-masterbedroom-fan
-  friendly_name: masterbedroom-fan
-  room_key: masterbedroom_fan
+  new_hostname: plug-mason-spare
+  friendly_name: Mason Spare Plug
+  room_key: mason_spare
   protect: false
-  live: false
+  live: true
   flags:
-  - 'stale: will not use (retire list)'
+  - 'included 2026-11-01 as plug-mason-spare (spare, nothing plugged in)'
 - ha_name: null
   mac: null
   hostname: switch-3w-upstairs
@@ -1334,3 +1334,16 @@ devices:
   live: false
   flags:
   - 'stale: will not use (retire list)'
+- ha_name: null
+  mac: a0:92:08:aa:b7:63
+  hostname: bulb-officeceiling-1
+  class: bulb
+  configs: []
+  keep_config: null
+  new_hostname: bulb-office-1
+  friendly_name: Office 1
+  room_key: officeceiling
+  protect: false
+  live: true
+  flags:
+  - 'added by hand 2026-11-01: live but never in HA, found by network scan (second office ceiling bulb)'

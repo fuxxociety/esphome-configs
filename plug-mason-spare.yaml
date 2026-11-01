@@ -1,0 +1,8 @@
+# Spare plug by the window in Mason's room (nothing plugged in). Was plug-masterbedroom-fan, never in HA.
+substitutions:
+  name: plug-mason-spare
+  friendly_name: Mason Spare Plug
+  room_key: mason_spare
+
+packages:
+  device: !include templates/enbrighten/wfd4105-bk7231t-switch.yaml
