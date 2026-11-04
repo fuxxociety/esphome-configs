@@ -898,13 +898,15 @@ devices:
   configs:
   - legacy/bulb-craftroom-1.yaml
   keep_config: legacy/bulb-craftroom-1.yaml
+  # 2026-11-03: the bulb in the craft room is a Kauf RGBWW (ESP8266/8285), not the Treatlife SL10 of the legacy
+  # config; it was unreachable only while the craft room switch was dead. MAC unknown until it is online.
+  template: templates/kauf/rgbww-bulb.yaml
   new_hostname: bulb-craftroom-1
   friendly_name: Craft Room 1
   room_key: craftroom
   protect: false
-  live: false
-  flags:
-  - 'stale: will not use (retire list)'
+  live: true
+  flags: []
 - ha_name: null
   mac: null
   hostname: bulb-livingroom-4
@@ -1110,47 +1112,53 @@ devices:
   - 'Kauf bulb with no room: set room/friendly_name/room_key by hand'
   - 'stale: will not use (retire list)'
 - ha_name: null
-  mac: null
+  mac: c8:c9:a3:30:2e:9a
   hostname: livingroom-1
   class: bulb
   configs:
   - legacy/bulb-livingroom-1.yaml
   keep_config: legacy/bulb-livingroom-1.yaml
+  # 2026-11-04: a Kauf RGBWW on the living room switch (stock kauf-bulb-302e9a, Kauf 1.92); the legacy
+  # config was a placeholder with no hardware. Back online once the living room switch was repaired.
+  template: templates/kauf/rgbww-bulb.yaml
   new_hostname: bulb-livingroom-1
   friendly_name: Living Room 1
   room_key: livingroom
   protect: false
-  live: false
-  flags:
-  - 'stale: will not use (retire list)'
+  live: true
+  flags: []
 - ha_name: null
-  mac: null
+  mac: c8:c9:a3:30:4c:c4
   hostname: livingroom-2
   class: bulb
   configs:
   - legacy/bulb-livingroom-2.yaml
   keep_config: legacy/bulb-livingroom-2.yaml
+  # 2026-11-04: a Kauf RGBWW on the living room switch (stock kauf-bulb-304cc4, Kauf 1.92); the legacy
+  # config was a placeholder with no hardware. Back online once the living room switch was repaired.
+  template: templates/kauf/rgbww-bulb.yaml
   new_hostname: bulb-livingroom-2
   friendly_name: Living Room 2
   room_key: livingroom
   protect: false
-  live: false
-  flags:
-  - 'stale: will not use (retire list)'
+  live: true
+  flags: []
 - ha_name: null
-  mac: null
+  mac: c8:c9:a3:30:28:8a
   hostname: livingroom-3
   class: bulb
   configs:
   - legacy/bulb-livingroom-3.yaml
   keep_config: legacy/bulb-livingroom-3.yaml
+  # 2026-11-04: a Kauf RGBWW on the living room switch (stock kauf-bulb-30288a, Kauf 1.92); the legacy
+  # config was a placeholder with no hardware. Back online once the living room switch was repaired.
+  template: templates/kauf/rgbww-bulb.yaml
   new_hostname: bulb-livingroom-3
   friendly_name: Living Room 3
   room_key: livingroom
   protect: false
-  live: false
-  flags:
-  - 'stale: will not use (retire list)'
+  live: true
+  flags: []
 - ha_name: null
   mac: null
   hostname: livingroom-spare

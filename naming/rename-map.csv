@@ -1099,3 +1099,6 @@ upstairs-3w-light-switch,switch-upstairs-stairwell,upstairs,3way,sensor.upstairs
 upstairs-3w-light-switch,switch-upstairs-stairwell,upstairs,3way,sensor.upstairs_3w_light_switch_wifi_signal_percentage,WiFi Signal Percentage,WiFi Signal Percentage,sensor.upstairs_stairwell_wifi_signal_percentage,RENAMED,,0,
 upstairs-3w-light-switch,switch-upstairs-stairwell,upstairs,3way,switch.relay,Relay,(device name),light.upstairs_stairwell,RENAMED,,0,
 upstairs-3w-light-switch,switch-upstairs-stairwell,upstairs,3way,update.switch_3w_upstairs_firmware,Firmware,(device name),update.switch_upstairs_stairwell_firmware,HA-managed,yes,0,
+livingroom-1,bulb-livingroom-1,livingroom,bulb,,,(device name),light.living_room_1,NEW,,0,
+livingroom-2,bulb-livingroom-2,livingroom,bulb,,,(device name),light.living_room_2,NEW,,0,
+livingroom-3,bulb-livingroom-3,livingroom,bulb,,,(device name),light.living_room_3,NEW,,0,

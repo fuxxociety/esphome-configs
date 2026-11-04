@@ -14,6 +14,10 @@ groups:
   - light.front_entry_1
   light.group_frontporch:
   - light.front_porch_1
+  light.group_livingroom:
+  - light.living_room_1
+  - light.living_room_2
+  - light.living_room_3
   light.group_masterbath_shower:
   - light.master_bath_shower_fixture
   - light.master_bath_tub
@@ -231,7 +235,7 @@ automation:
         switches:
         - entity: light.living_room
           mode: select.living_room_relay_config
-        group: null
+        group: light.group_livingroom
         timer: null
         timer_off: false
         off_also: []
@@ -464,6 +468,7 @@ automation:
       light.group_diningroom: diningroom
       light.group_frontentry: frontentry
       light.group_frontporch: frontporch
+      light.group_livingroom: livingroom
       light.group_masterbath_shower: masterbath_shower
       light.group_masterbath_toilet: masterbath_toilet
       light.group_masterbed: masterbed
@@ -638,7 +643,7 @@ automation:
     data:
       room: '{{ room }}'
 - id: v2_room_mirror
-  alias: '[v2] Room → switch mirror'
+  alias: '[v2] Room to switch mirror'
   description: 'Method C: in smart mode (Relay Config = Always On) the switch''s light follows the room group''s on/off, brightness and colour, from any source. Its
     status LED shows it.'
   mode: queued
@@ -649,6 +654,7 @@ automation:
     - light.group_diningroom
     - light.group_frontentry
     - light.group_frontporch
+    - light.group_livingroom
     - light.group_masterbath_shower
     - light.group_masterbath_toilet
     - light.group_masterbed
@@ -690,7 +696,7 @@ automation:
             | list) %}{% elif trigger.to_state.attributes.color_temp_kelvin %}{% set d = dict(d, color_temp_kelvin=trigger.to_state.attributes.color_temp_kelvin)
             %}{% endif %}{{ d }}'
 - id: v2_switch_to_room
-  alias: '[v2] Switch → room'
+  alias: '[v2] Switch to room'
   description: A person changing a smart-mode switch's light (dashboard, voice) applies it to the room group. Changes made by the mirror or by the switch's own button
     aren't forwarded.
   mode: queued
@@ -701,6 +707,7 @@ automation:
     - light.dining_room
     - light.front_entry
     - light.front_porch
+    - light.living_room
     - light.master_bath_shower
     - light.master_bath_toilet
     - light.master_bed
@@ -737,8 +744,8 @@ automation:
         %}{% endif %}{{ d }}'
 - id: v2_room_power_up
   alias: '[v2] Room power-up'
-  description: 'BEHAVIOR.md §0.5: the room group is turned on while its bulbs are unpowered (smart-mode switch with its relay open) → turn the switch''s light on,
-    which energises the relay; the bulbs come up at 100 %.'
+  description: 'BEHAVIOR.md section 0.5: the room group is turned on while its bulbs are unpowered (smart-mode switch with its relay open), so turn the switch''s
+    light on, which energises the relay; the bulbs come up at 100 %.'
   mode: parallel
   max: 10
   triggers:
