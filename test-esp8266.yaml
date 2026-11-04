@@ -1,0 +1,119 @@
+# Bench test image for a loose ESP8266 module (ESP-12E/F, 4 MB) in the serial flasher: chip health, Wi-Fi signal and
+# link reliability. Not a fleet device; hand-written. First user: the ESP8266 taken out of the master bath closet
+# switch on 2026-11-01 (MAC 58:bf:25:d9:e7:28).
+#
+# Watch it on the flasher's UART (115200), at http://test-esp8266.local/ or in HA. Reliability = Boot Count and
+# WiFi Disconnects staying put while Uptime grows; Reset Reason says why it last restarted.
+substitutions:
+  name: test-esp8266
+  friendly_name: Bench Test
+  device_description: ESP8266 bench test (chip, Wi-Fi, reliability)
+  disable_entities: 'false'
+  logger_baud: '115200'          # the module's UART is free on the bench
+  api_reboot_timeout: 0s         # keep running without HA, so a reboot always means a real fault
+
+packages:
+  platform: !include common/platforms/esp8266.yaml
+
+esp8266:
+  restore_from_flash: true       # Boot Count survives power cycles
+
+esphome:
+  on_boot:
+    priority: 600
+    then:
+      - lambda: id(boot_count) += 1;
+
+logger:
+  level: DEBUG
+
+web_server:
+  port: 80
+
+debug:
+  update_interval: 30s
+
+# ESP-12 on-board blue LED (GPIO2, active low): blinks while Wi-Fi/API are down
+status_led:
+  pin:
+    number: GPIO2
+    inverted: true
+
+globals:
+  - id: boot_count
+    type: int
+    restore_value: true
+    initial_value: '0'
+  - id: wifi_disconnects
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: wifi_connected_at
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+
+wifi:
+  on_connect:
+    - lambda: id(wifi_connected_at) = millis();
+  on_disconnect:
+    - lambda: id(wifi_disconnects) += 1;
+    - component.update: sensor_wifi_disconnects
+
+sensor:
+  - id: !extend sensor_wifi_signal
+    update_interval: 10s
+
+  - platform: template
+    id: sensor_boot_count
+    name: Boot Count
+    icon: mdi:restart
+    accuracy_decimals: 0
+    state_class: total_increasing
+    update_interval: 60s
+    lambda: return id(boot_count);
+
+  - platform: template
+    id: sensor_wifi_disconnects
+    name: WiFi Disconnects
+    icon: mdi:wifi-off
+    accuracy_decimals: 0
+    state_class: total_increasing
+    update_interval: 60s
+    lambda: return id(wifi_disconnects);
+
+  - platform: template
+    name: WiFi Connected For
+    icon: mdi:timer-outline
+    unit_of_measurement: s
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: |-
+      if (!id(component_wifi).is_connected()) return 0;
+      return (millis() - id(wifi_connected_at)) / 1000;
+
+  - platform: uptime
+    name: Uptime Seconds
+    update_interval: 60s
+
+  - platform: adc
+    pin: VCC
+    name: Supply Voltage
+    update_interval: 60s
+
+  - platform: debug
+    free:
+      name: Heap Free
+    block:
+      name: Heap Max Block
+    fragmentation:
+      name: Heap Fragmentation
+    loop_time:
+      name: Loop Time
+
+text_sensor:
+  - platform: debug
+    device:
+      name: Device Info
+    reset_reason:
+      name: Reset Reason

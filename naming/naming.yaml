@@ -742,13 +742,13 @@ devices:
 - ha_name: Switch-Office-Fan
   mac: 58:bf:25:d7:3b:77
   hostname: switch-office-fan
-  class: ds01c
+  class: ss01s                # SS01S relay switch, ESP8266MOD 4 MB; a test spare since 2026-11-01
   configs:
   - legacy/s-office-fan.yaml
-  keep_config: dimmer-office-ceiling.yaml
-  new_hostname: fan-office-ceiling
-  friendly_name: Office Ceiling
-  room_key: office_ceiling
+  keep_config: legacy/s-office-fan.yaml
+  new_hostname: switch-spare
+  friendly_name: Spare Switch
+  room_key: spare_switch
   protect: false
   live: true
   flags:
@@ -962,19 +962,19 @@ devices:
   flags:
   - 'stale: will not use (retire list)'
 - ha_name: null
-  mac: null
+  mac: d8:1f:12:29:87:5a      # Tuya WB3S (BK7231T) on a DS01C board, flashed 2026-11-01; stock dump in dist/stock/
   hostname: dimmer-office-ceiling
   class: ds01c
   configs:
   - legacy/dimmer-office-ceiling.yaml
   keep_config: legacy/dimmer-office-ceiling.yaml
+  template: templates/treatlife/ds01c-fan-wb3s.yaml
   new_hostname: fan-office-ceiling
   friendly_name: Office Ceiling
   room_key: office_ceiling
   protect: false
-  live: false
-  flags:
-  - 'stale: will not use (retire list)'
+  live: true
+  flags: []
 - ha_name: null
   mac: null
   hostname: dimmer-office-ceiling-fan

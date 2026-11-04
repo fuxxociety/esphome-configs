@@ -5,6 +5,9 @@ substitutions:
   wifi_power: '17'
   wifi_fast_connect: 'false'
   wifi_reboot_timeout: 10min
+  # Off: 2025+ ESPHome rescans after connecting and roams to a stronger AP. On ESP8266 every scan and roam drops the
+  # link (the shower fixture dropped 12x in 3 h with it on); the old fleet (2024.4) never roamed.
+  wifi_roaming: 'false'
 
 wifi:
   id: component_wifi
@@ -14,6 +17,7 @@ wifi:
   output_power: ${wifi_power}
   fast_connect: ${wifi_fast_connect}
   reboot_timeout: ${wifi_reboot_timeout}
+  post_connect_roaming: ${wifi_roaming}
   ap:
     ssid: ${friendly_name} AP
     password: !secret ap_password

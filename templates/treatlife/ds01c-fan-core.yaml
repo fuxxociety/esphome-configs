@@ -1,0 +1,144 @@
+# Treatlife DS01C "dimmer" switch driving a CEILING FAN motor (BEHAVIOR.md §3, §0.5, §5): the logic, for any Wi-Fi
+# module. Not used directly: the module wrappers add the platform and the pins.
+#   ds01c-fan.yaml       ESP-12E (the original module)
+#   ds01c-fan-wb3s.yaml  Tuya WB3S (BK7231T) on the same footprint
+# Tuya MCU on UART (9600): dp1 = on/off, dp2 = level (speed_min..1000, the MCU "dims" the motor = speed control).
+#
+# Entities: the fan (on/off + 1–100 % speed, name = device name), Button, Button Press Duration + diagnostics.
+# Power loss: the fan stays OFF when utility power returns; software reboots leave the MCU's state alone.
+# Status LED: not found yet (BEHAVIOR.md §3); hold feedback drives a placeholder until status_led is wired up.
+substitutions:
+  device_description: Treatlife DS01C ceiling-fan controller
+  status_led_id: status_led
+  api_reboot_timeout: 0s
+  speed_min: '148'      # lowest dp2 value the MCU accepts (old tuya light: 148–1000)
+
+packages:
+  button: !include ../../common/button/multiclick.yaml
+
+esphome:
+  on_boot:
+    - priority: -100
+      then:
+        - if:
+            condition:
+              lambda: return fleet::power_on_reset();
+            then:
+              # the MCU lost power too and may come up running the motor: give it time to start, then force off
+              - delay: 5s
+              - lambda: |-
+                  ESP_LOGI("power", "power-on reset: fan off");
+                  id(tuyamcu)->set_boolean_datapoint_value(1, false);
+                  id(main_fan).turn_off().perform();
+
+globals:
+  - id: from_mcu        # set while publishing a state the MCU reported, so it isn't sent back
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+
+uart:
+  rx_pin: ${uart_rx_pin}
+  tx_pin: ${uart_tx_pin}
+  baud_rate: 9600
+
+tuya:
+  id: tuyamcu
+  on_datapoint_update:
+    - sensor_datapoint: 1
+      datapoint_type: bool
+      then:
+        - lambda: |-
+            if (id(main_fan).state == x) return;
+            id(from_mcu) = true;
+            if (x) id(main_fan).turn_on().perform(); else id(main_fan).turn_off().perform();
+            id(from_mcu) = false;
+    - sensor_datapoint: 2
+      datapoint_type: int
+      then:
+        - lambda: |-
+            const int span = 1000 - ${speed_min};
+            const int speed = std::clamp(1 + (x - ${speed_min}) * 99 / span, 1, 100);
+            if (id(main_fan).speed == speed) return;
+            id(from_mcu) = true;
+            id(main_fan).make_call().set_speed(speed).perform();
+            id(from_mcu) = false;
+
+output:
+  # placeholder until the DS01C status LED is found (BEHAVIOR.md §3)
+  - {platform: template, id: bb_status_led, type: float, write_action: [lambda: return;]}
+
+light:
+  - platform: monochromatic
+    id: status_led
+    output: bb_status_led
+    internal: true
+
+fan:
+  - platform: template
+    id: main_fan
+    name: None
+    speed_count: 100
+    restore_mode: NO_RESTORE      # the MCU owns the state; it reports dp1/dp2 after boot
+    on_turn_on:
+      - lambda: if (!id(from_mcu)) id(tuyamcu)->set_boolean_datapoint_value(1, true);
+      - script.execute: event_switch_on
+    on_turn_off:
+      - lambda: if (!id(from_mcu)) id(tuyamcu)->set_boolean_datapoint_value(1, false);
+      - script.execute: event_switch_off
+    on_speed_set:
+      - lambda: |-
+          if (id(from_mcu)) return;
+          const uint32_t raw = ${speed_min} + (uint32_t) (x - 1) * (1000 - ${speed_min}) / 99;
+          id(tuyamcu)->set_integer_datapoint_value(2, raw);
+
+script:
+  - id: led_restore
+    then:
+      - light.turn_off: status_led
+
+  - id: gesture_single
+    then:
+      - fan.toggle: main_fan
+      - lambda: |-
+          id(ev_mode) = "Switched";
+          id(ev_brightness) = id(main_fan).state ? "bright" : "off";
+      - script.execute: event_single
+  - id: gesture_double
+    then:
+      - lambda: id(ev_mode) = "Switched";
+      - script.execute: event_double
+  - id: gesture_quad
+    then:
+      - lambda: id(ev_mode) = "Switched";
+      - script.execute: event_quad
+  - id: gesture_hold
+    then:
+      - lambda: id(ev_mode) = "Switched";
+      - script.execute: event_hold
+  # a fan controller has no relay modes; the 3–10 s hold is passed to HA as an event
+  - id: gesture_mode
+    then:
+      - lambda: id(ev_mode) = "Switched";
+      - script.execute: event_switchmode
+
+  - id: event_switch_on
+    then:
+      - homeassistant.event:
+          event: esphome.switch
+          data:
+            devicename: ${room_key}
+            room: ${room_key}
+            name_friendly: ${friendly_name}
+            action: switch_on
+            mode: Switched
+  - id: event_switch_off
+    then:
+      - homeassistant.event:
+          event: esphome.switch
+          data:
+            devicename: ${room_key}
+            room: ${room_key}
+            name_friendly: ${friendly_name}
+            action: switch_off
+            mode: Switched

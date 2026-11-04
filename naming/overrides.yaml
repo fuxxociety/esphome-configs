@@ -25,6 +25,10 @@
 # stale; on 2026-11-01 it was included as plug-mason-spare ("Mason Spare Plug", room_key mason_spare), edited directly
 # in naming.yaml - re-apply that if the draft is regenerated.
 
+# fan-office-ceiling (the dimmer-office-ceiling entry): since 2026-11-01 a Tuya WB3S (BK7231T, MAC d8:1f:12:29:87:5a)
+# on a DS01C board. Never in HA under a name, so edited directly in naming.yaml (mac, live: true,
+# template: templates/treatlife/ds01c-fan-wb3s.yaml) - re-apply if the draft is regenerated.
+
 # Unreachable, retired (2026-10-31): left out of the refactor, HA entries untouched
 "Kauf-Bulb-302342": {retire: true}
 "Kauf-Bulb-30288A": {retire: true}
@@ -60,13 +64,13 @@
   class: plug_appliance
   new_hostname: plug-washingmachine
   friendly_name: WashingMachine
-# Physically a Treatlife DS01C (dimmer-style fan controller) that was flashed with the SS01S config
+# Treatlife SS01S relay switch (ESP8266MOD 4 MB), formerly the office fan switch; a test spare since 2026-11-01
 "Switch-Office-Fan":
-  class: ds01c
-  keep_config: dimmer-office-ceiling.yaml
-  new_hostname: fan-office-ceiling
-  friendly_name: Office Ceiling
-  room_key: office_ceiling
+  class: ss01s
+  keep_config: legacy/s-office-fan.yaml
+  new_hostname: switch-spare
+  friendly_name: Spare Switch
+  room_key: spare_switch
 "fan-mbrpedestal":
   room_key: masterbed_pedestal
 "Plug-Dryer": {class: plug_appliance}

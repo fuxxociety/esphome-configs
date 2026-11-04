@@ -1,0 +1,18 @@
+# Treatlife DS01C "dimmer" switch driving a CEILING FAN motor, with a Tuya WB3S (BK7231T) in place of the ESP-12E
+# (logic: ds01c-fan-core.yaml). The WB3S has the ESP-12E's pad order (LibreTiny pcb template esp12e-22), so the board
+# traces land on: pad 16 TXD0 GPIO1 -> TX1 P11, pad 15 RXD0 GPIO3 -> RX1 P10, pad 7 GPIO13 -> P6 (button).
+#
+# Device file:
+#   substitutions: {name: fan-office-ceiling, friendly_name: Office Ceiling, room_key: office_ceiling}
+#   packages:      {device: !include templates/treatlife/ds01c-fan-wb3s.yaml}
+substitutions:
+  button_pin: P6
+  uart_tx_pin: P11      # UART1; the logger stays off UART (common/logger.yaml, baud 0)
+  uart_rx_pin: P10
+
+packages:
+  platform: !include ../../common/platforms/bk7231t.yaml
+  fan: !include ds01c-fan-core.yaml
+
+bk72xx:
+  board: wb3s

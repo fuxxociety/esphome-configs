@@ -5,6 +5,7 @@ substitutions:
   cw_pin: GPIO5
   ww_pin: GPIO4
   ring_leds: '60'
+  wifi_fast_connect: 'true'   # as the old config (includes/mcu/components/wifi.yaml hard-coded it)
 
 packages:
   device: !include templates/fixture/rgb-cww.yaml

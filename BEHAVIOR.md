@@ -201,6 +201,17 @@ Brightness, `copy_vals`, No HASS):
 - Target: the SS01S template on the ESP32-C3 platform with those pins. The power sensor is the actual load state,
   because the other leg of the 3-way can flip it, so **the light's state follows the power sensor**, not the relay. A single
   press toggles the relay, which flips the load whichever way the other leg is set.
+- **Migrated 2026-11-01** (`switch-upstairs-stairwell`, `switch-downstairs-stairwell`). IO18/IO19 confirmed as the LEDs by
+  pad translation from the original ESP8266 board (relay, button and sensor translate the same way and work). Load
+  polarity checked live: both Load sensors read on while the bulb had power.
+- **Both legs feed ONE bulb.** Anything outside the firmware (dashboards, automations) takes the stairwell's state from the
+  two Load sensors, `binary_sensor.upstairs_stairwell_load` OR `binary_sensor.downstairs_stairwell_load`, never from a
+  relay or one leg's light alone. Commands go to ONE leg (`light.upstairs_stairwell`): its firmware flips the relay only
+  when the Load sensor disagrees. Never command both legs at once: both can see "off", both flip, and the bulb stays off.
+- **Planned: smart-bulb mode** (when the stairwell gets a smart bulb). A 3-way can't just hold its relay closed, because
+  the other leg can open the circuit. Smart mode keeps the circuit powered instead: when Load drops, the leg flips its
+  relay back. Presses become events and HA steps the bulb (bright → medium → low → night → off, as on the SS01S). Dashboards
+  then control the bulb, with the Load sensors as its "has power" indicator.
 
 ## 5. Gestures, shared by all switches [decided]
 

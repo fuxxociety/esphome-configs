@@ -18,6 +18,10 @@ substitutions:
   ring_leds: '60'
   ring_variant: WS2812
   ring_order: GRB
+  # Disco Strobe (HA's Disco Shower script times the bursts): cold white at full power, flashing in hardware
+  pwm_frequency_hz: '300'      # = pwm_frequency, as a number for the restore
+  strobe_hz: '100'
+  strobe_max_burst: 600ms      # a burst never lasts longer than this, whatever HA asks
 
 packages:
   platform: !include ../../common/platforms/esp8266.yaml
@@ -56,3 +60,36 @@ light:
     restore_mode: RESTORE_DEFAULT_OFF
     default_transition_length: 250ms
     effects: !include ../../common/effects/addressable.yaml
+
+# Disco Strobe: one burst of the panel's cold white at 100 % flashing at ${strobe_hz} Hz. The PWM hardware makes the
+# flashes (cold output at strobe_hz, 50 % duty = 5 ms at full power, 5 ms dark), so they are exact and independent of
+# the main loop and of Wi-Fi. HA turns it on for a burst and off again; the firmware ends it after strobe_max_burst
+# regardless. Off restores the PWM frequency and whatever the panel light was showing. The ring is not touched.
+switch:
+  - platform: template
+    id: disco_strobe
+    name: Disco Strobe
+    icon: mdi:flash
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    turn_on_action:
+      - lambda: |-
+          id(output_warm)->set_level(0.0f);
+          id(output_cold)->update_frequency(${strobe_hz});
+          id(output_cold)->set_level(0.5f);
+      - script.execute: disco_strobe_cap
+    turn_off_action:
+      - script.stop: disco_strobe_cap
+      - lambda: |-
+          id(output_cold)->update_frequency(${pwm_frequency_hz});
+          float cw = 0.0f, ww = 0.0f;
+          id(main_light)->current_values_as_cwww(&cw, &ww, true);
+          id(output_cold)->set_level(cw);
+          id(output_warm)->set_level(ww);
+
+script:
+  - id: disco_strobe_cap
+    mode: restart
+    then:
+      - delay: ${strobe_max_burst}
+      - switch.turn_off: disco_strobe
