@@ -208,10 +208,15 @@ Brightness, `copy_vals`, No HASS):
   two Load sensors, `binary_sensor.upstairs_stairwell_load` OR `binary_sensor.downstairs_stairwell_load`, never from a
   relay or one leg's light alone. Commands go to ONE leg (`light.upstairs_stairwell`): its firmware flips the relay only
   when the Load sensor disagrees. Never command both legs at once: both can see "off", both flip, and the bulb stays off.
-- **Planned: smart-bulb mode** (when the stairwell gets a smart bulb). A 3-way can't just hold its relay closed, because
-  the other leg can open the circuit. Smart mode keeps the circuit powered instead: when Load drops, the leg flips its
-  relay back. Presses become events and HA steps the bulb (bright → medium → low → night → off, as on the SS01S). Dashboards
-  then control the bulb, with the Load sensors as its "has power" indicator.
+- **Smart-bulb mode** (2026-11-04, Kauf bulb `bulb-stairwell-1`; both legs and the bulb share room_key `stairs`,
+  group `light.group_stairs`). Relay Config Switched / Always On, kept identical on both legs over encrypted UDP
+  (packet_transport, fleet API key): newest change wins; equal generations that disagree both settle on Switched.
+  In Always On the Load sensor is the only "has power" test, and exactly one leg ever flips to restore it: the leg that
+  is pressed while Load is off, or the leg HA presses "Restore Power" on (`[v2] Room power-up` uses the first smart leg;
+  the button flips only if Load reads off). Mode changes, mirror updates and reboots never flip a relay; after an
+  outage the bulb stays dark until the first press. Otherwise presses are events and HA steps the bulb (bright → medium
+  → low → night → off, as on the SS01S) and mirrors it onto both legs' lights and status LEDs. HA away for
+  ha_offline_revert_ms (or after a power-on reset until HA connects): both legs fall back to Switched.
 
 ## 5. Gestures, shared by all switches [decided]
 

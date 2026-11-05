@@ -1102,3 +1102,5 @@ upstairs-3w-light-switch,switch-upstairs-stairwell,upstairs,3way,update.switch_3
 livingroom-1,bulb-livingroom-1,livingroom,bulb,,,(device name),light.living_room_1,NEW,,0,
 livingroom-2,bulb-livingroom-2,livingroom,bulb,,,(device name),light.living_room_2,NEW,,0,
 livingroom-3,bulb-livingroom-3,livingroom,bulb,,,(device name),light.living_room_3,NEW,,0,
+stairwell-1,bulb-stairwell-1,stairs,bulb,,,(device name),light.stairwell_1,NEW,,0,
+bulb-craftroom-1,bulb-craftroom-1,craftroom,bulb,,,(device name),light.craft_room_1,NEW,,0,

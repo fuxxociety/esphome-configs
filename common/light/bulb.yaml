@@ -1,4 +1,5 @@
-# Behaviour every smart bulb shares (BEHAVIOR.md §0.5, §6). The bulb template names its light `main_light` and
+# Behaviour every smart bulb shares (BEHAVIOR.md §0.5, §6). The bulb template names its light `main_light` (or sets
+# substitution light_id, e.g. kauf_light for Kauf's own package) and
 # calls scripts bulb_event_on / bulb_event_off from the light's on_turn_on / on_turn_off.
 #
 # Power loss: utility power returning (or the wall switch's relay closing) brings the bulb up at 100 % neutral white,
@@ -6,6 +7,7 @@
 substitutions:
   # Default Fade's first value (ms); the bulb keeps any value set later. Templates may raise it (see sm2335-rgbww.yaml).
   default_fade_ms: '250'
+  light_id: main_light
 
 esphome:
   on_boot:
@@ -17,12 +19,12 @@ esphome:
             then:
               - lambda: |-
                   ESP_LOGI("power", "power-on reset: 100 %% neutral white");
-                  auto call = id(main_light).turn_on();
+                  auto call = id(${light_id}).turn_on();
                   call.set_brightness(1.0f);
-                  if (id(main_light)->get_traits().supports_color_capability(light::ColorCapability::COLOR_TEMPERATURE) ||
-                      id(main_light)->get_traits().supports_color_capability(light::ColorCapability::COLD_WARM_WHITE)) {
+                  if (id(${light_id})->get_traits().supports_color_capability(light::ColorCapability::COLOR_TEMPERATURE) ||
+                      id(${light_id})->get_traits().supports_color_capability(light::ColorCapability::COLD_WARM_WHITE)) {
                     call.set_color_temperature(300);       // single_press_global "bright"
-                  } else if (id(main_light)->get_traits().supports_color_capability(light::ColorCapability::WHITE)) {
+                  } else if (id(${light_id})->get_traits().supports_color_capability(light::ColorCapability::WHITE)) {
                     call.set_white(1.0f);
                     call.set_rgb(0.0f, 0.0f, 0.0f);
                   }
@@ -45,7 +47,7 @@ number:
     optimistic: true
     restore_value: true
     on_value:
-      - lambda: id(main_light)->set_default_transition_length(x);
+      - lambda: id(${light_id})->set_default_transition_length(x);
 
 script:
   # "Bulbs trigger Switch indicators" listens for esphome.light with device_id = the room key

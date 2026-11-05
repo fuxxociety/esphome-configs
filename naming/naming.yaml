@@ -281,7 +281,8 @@ devices:
   keep_config: legacy/downstairs-stairwell.yaml
   new_hostname: switch-downstairs-stairwell
   friendly_name: Downstairs Stairwell
-  room_key: downstairs
+  # 2026-11-04: both legs of the stairwell 3-way share one room (smart mode, mode sync over UDP)
+  room_key: stairs
   protect: false
   live: true
   flags: []
@@ -844,7 +845,8 @@ devices:
   keep_config: reference/upstairs-stairwell.yaml
   new_hostname: switch-upstairs-stairwell
   friendly_name: Upstairs Stairwell
-  room_key: upstairs
+  # 2026-11-04: both legs of the stairwell 3-way share one room (smart mode, mode sync over UDP)
+  room_key: stairs
   protect: false
   live: true
   flags: []
@@ -892,14 +894,15 @@ devices:
   flags:
   - 'stale: will not use (retire list)'
 - ha_name: null
-  mac: null
+  mac: c8:c9:a3:30:23:42
   hostname: bulb-craftroom-1
   class: bulb
   configs:
   - legacy/bulb-craftroom-1.yaml
   keep_config: legacy/bulb-craftroom-1.yaml
   # 2026-11-03: the bulb in the craft room is a Kauf RGBWW (ESP8266/8285), not the Treatlife SL10 of the legacy
-  # config; it was unreachable only while the craft room switch was dead. MAC unknown until it is online.
+  # config; it was unreachable only while the craft room switch was dead. Stock kauf-bulb-302342; serial-flashed
+  # (full erase) with templates/kauf/rgbww-bulb.yaml on 2026-11-04.
   template: templates/kauf/rgbww-bulb.yaml
   new_hostname: bulb-craftroom-1
   friendly_name: Craft Room 1
@@ -1156,6 +1159,21 @@ devices:
   new_hostname: bulb-livingroom-3
   friendly_name: Living Room 3
   room_key: livingroom
+  protect: false
+  live: true
+  flags: []
+- ha_name: Stairwell 1
+  mac: c8:c9:a3:30:34:a6
+  hostname: stairwell-1
+  class: bulb
+  configs: []
+  keep_config: null
+  # 2026-11-04: Kauf RGBWW in the stairwell (stock kauf-bulb-3034a6), adopted in the HA box's Device Builder as
+  # stairwell-1 on 2026-11-03 (Kauf 2.018, that file never left the box); powered by the two stairwell 3-way legs.
+  template: templates/kauf/rgbww-bulb.yaml
+  new_hostname: bulb-stairwell-1
+  friendly_name: Stairwell 1
+  room_key: stairs
   protect: false
   live: true
   flags: []

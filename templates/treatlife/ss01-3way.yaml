@@ -1,14 +1,27 @@
-# Treatlife SS01 3-way wall switch (ESP32-C3-12F) driving a LIGHT together with a second switch (BEHAVIOR.md §4).
-# Pins (reference/includes-2025-07/device_configs/treatlife-ss01-3way.yaml): relay IO04, button IO05 (inverted),
-# white status LED IO18 (inverted), red error LED IO19 (inverted), load/power sensor IO03 (inverted).
+# Treatlife SS01 3-way wall switch (ESP32-C3-12F), one of the TWO legs of a 3-way circuit feeding one light
+# (BEHAVIOR.md §4). Pins (reference/includes-2025-07/device_configs/treatlife-ss01-3way.yaml): relay IO04, button IO05
+# (inverted), white status LED IO18 (inverted), red error LED IO19 (inverted), load/power sensor IO03 (inverted).
 #
 # Device file:
-#   substitutions: {name: switch-upstairs-stairwell, friendly_name: Upstairs Stairwell, room_key: upstairs}
+#   substitutions: {name: switch-upstairs-stairwell, friendly_name: Upstairs Stairwell, room_key: stairs,
+#                   peer: switch-downstairs-stairwell}
 #   packages:      {device: !include templates/treatlife/ss01-3way.yaml}
 #
-# The other leg of the 3-way can flip the load too, so the relay says nothing about the light: the light entity
-# follows the POWER SENSOR. A press flips the relay (always flips the load); HA turning the light on/off flips the
-# relay only when the sensor disagrees. Power loss: relay de-energised (BEHAVIOR.md §0.5).
+# Either leg can flip the circuit, so the relay says nothing about the light: the POWER SENSOR ("Load") is the truth.
+#
+# Relay Config (kept identical on both legs, see "mode sync" below):
+#   Switched   the light follows Load; a press flips the relay (always flips the circuit); HA turning the light
+#              on/off flips the relay only when Load disagrees.
+#   Always On  smart bulb. Presses are events and HA steps the bulb (bright → medium → low → night → off, as the
+#              SS01S); HA mirrors the bulb onto this light and the status LED. The relay is never flipped by a mode
+#              change, a mirror update or a reboot. Power is restored ONLY when Load reads off and either this leg's
+#              button is pressed, or HA presses "Restore Power" on ONE leg. So exactly one leg ever flips.
+# The effective mode is Switched while ha_fallback is set (after a power-on reset until HA connects, or after
+# ha_offline_revert_ms without HA), as on every other switch (common/switch/core.yaml).
+#
+# Mode sync: each leg broadcasts its Relay Config to its peer over encrypted UDP (packet_transport), as one number
+# mode_word = generation * 2 + smart. A local change takes generation max(own, peer) + 1; a newer generation from the
+# peer is adopted. Equal generations that disagree (both changed while apart) both settle on Switched.
 substitutions:
   device_description: Treatlife SS01 3-way light switch
   relay_pin: GPIO4
@@ -18,6 +31,9 @@ substitutions:
   load_sensor_pin: GPIO3
   status_led_id: status_led
   api_reboot_timeout: 0s
+  ha_offline_revert_ms: '1800000'
+  # smart-mode step window: presses within this keep stepping, after it a press toggles
+  step_window: 8s
 
 packages:
   platform: !include ../../common/platforms/esp32c3.yaml
@@ -33,18 +49,49 @@ esphome:
       then:
         - lambda: |-
             if (fleet::power_on_reset()) {
+              // utility power returned: relay to its rest position; smart mode waits for HA (Switched until then)
               id(relay_on) = false;
-              ESP_LOGI("power", "power-on reset: relay open");
+              id(ha_fallback) = id(relay_config).current_option() == "Always On";
+              ESP_LOGI("power", "power-on reset: relay rest, fallback=%d", id(ha_fallback));
             }
             if (id(relay_on)) id(relay_output).turn_on(); else id(relay_output).turn_off();
+        - script.execute: smart_refresh
         - script.execute: copy_vals
+    - priority: -100
+      then:
+        - lambda: id(booted) = true;
+        - script.execute: mode_publish
 
 globals:
   - id: relay_on
     type: bool
     restore_value: true
     initial_value: 'false'
-  - id: from_sensor      # set while the light is following the sensor, so the change doesn't flip the relay
+  - id: from_sensor      # set while this firmware moves the light itself, so the change doesn't flip the relay
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: ha_fallback      # effective mode forced to Switched
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: api_lost_at
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: mode_gen         # generation of the current Relay Config, shared with the peer
+    type: int
+    restore_value: true
+    initial_value: '0'
+  - id: mode_adopting    # set while Relay Config is being set from the peer, so it isn't counted as a local change
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: booted           # Relay Config restoring itself at boot is not a local change
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: smart            # effective mode: Always On and not in fallback (refreshed by smart_refresh)
     type: bool
     restore_value: false
     initial_value: 'false'
@@ -61,16 +108,26 @@ output:
     id: error_led_output
     pin: ${error_led_pin}
     inverted: true
-  - platform: template
-    id: light_output
-    type: binary
-    write_action:
-      - lambda: |-
-          // HA (or a press) asked for state; flip the relay only if the load isn't already there
-          if (id(from_sensor)) return;
-          if (state != id(load_sensor).state) id(flip_relay).execute();
+  # the light has no hardware of its own (it shows the circuit, or the mirrored smart bulb)
+  - {platform: template, id: bb_red, type: float, write_action: [lambda: return;]}
+  - {platform: template, id: bb_green, type: float, write_action: [lambda: return;]}
+  - {platform: template, id: bb_blue, type: float, write_action: [lambda: return;]}
+  - {platform: template, id: bb_cold, type: float, write_action: [lambda: return;]}
+  - {platform: template, id: bb_warm, type: float, write_action: [lambda: return;]}
   - {platform: template, id: bb_led_on, type: float, write_action: [lambda: return;]}
   - {platform: template, id: bb_led_off, type: float, write_action: [lambda: return;]}
+
+udp:
+
+packet_transport:
+  - platform: udp
+    update_interval: 30s
+    encryption: !secret api_enc_key
+    rolling_code_enable: true
+    sensors: [mode_word]
+    providers:
+      - name: ${peer}
+        encryption: !secret api_enc_key
 
 binary_sensor:
   - platform: gpio
@@ -86,8 +143,21 @@ binary_sensor:
       - delayed_off: 50ms
     on_state:
       - lambda: |-
+          // Switched: the light IS the circuit. Smart: the bulb lost power -> off; regained it -> it boots at 100 %
+          // neutral white (common/light/bulb.yaml), shown here until HA mirrors the real state
           id(from_sensor) = true;
-          if (x) id(main_light).turn_on().perform(); else id(main_light).turn_off().perform();
+          if (!x) {
+            id(main_light).turn_off().set_transition_length(0).perform();
+          } else if (!id(smart)) {
+            id(main_light).turn_on().set_transition_length(0).perform();
+          } else {
+            auto call = id(main_light).turn_on();
+            call.set_transition_length(0);
+            call.set_color_mode(ColorMode::COLD_WARM_WHITE);
+            call.set_color_temperature(300);
+            call.set_brightness(1.0f);
+            call.perform();
+          }
           id(from_sensor) = false;
       - script.execute: copy_vals
       - if:
@@ -98,12 +168,65 @@ binary_sensor:
           else:
             - script.execute: event_switch_off
 
+sensor:
+  # this leg's Relay Config for the peer: generation * 2 + (Always On ? 1 : 0)
+  - platform: template
+    id: mode_word
+    internal: true
+    update_interval: never
+    accuracy_decimals: 0
+  - platform: packet_transport
+    id: peer_mode_word
+    internal: true
+    provider: ${peer}
+    remote_id: mode_word
+    on_value:
+      - lambda: |-
+          if (std::isnan(x) || x < 0) return;
+          const int gen = (int) x / 2;
+          const bool peer_smart = ((int) x % 2) == 1;
+          const bool mine = id(relay_config).current_option() == "Always On";
+          std::string want;
+          if (gen > id(mode_gen)) {
+            want = peer_smart ? "Always On" : "Switched"; // the peer changed it last
+            id(mode_gen) = gen;
+          } else if (gen == id(mode_gen) && peer_smart != mine) {
+            want = "Switched";                            // both changed while apart: settle on the safe mode
+          } else {
+            return;
+          }
+          if (want != id(relay_config).current_option()) {
+            ESP_LOGI("mode", "peer gen %d: Relay Config -> %s", gen, want.c_str());
+            id(mode_adopting) = true;
+            id(relay_config).make_call().set_option(want).perform();
+            id(mode_adopting) = false;
+          }
+          id(mode_publish).execute();
+
 light:
-  - platform: binary
+  # Exposes every bulb capability so HA can mirror light.group_<room_key> onto it in smart mode.
+  - platform: rgbww
     id: main_light
     name: None
-    output: light_output
-    restore_mode: ALWAYS_OFF     # state comes from the load sensor at boot
+    red: bb_red
+    green: bb_green
+    blue: bb_blue
+    cold_white: bb_cold
+    warm_white: bb_warm
+    cold_white_color_temperature: 6500 K
+    warm_white_color_temperature: 2700 K
+    color_interlock: true
+    restore_mode: ALWAYS_OFF     # state comes from the Load sensor at boot (or from HA's mirror)
+    default_transition_length: 0s
+    on_turn_on:
+      - lambda: |-
+          // Switched: HA (or a person) asked for light; flip only if the circuit isn't already powered
+          if (!id(from_sensor) && !id(smart) && !id(load_sensor).state) id(flip_relay).execute();
+    on_turn_off:
+      - lambda: |-
+          if (!id(from_sensor) && !id(smart) && id(load_sensor).state) id(flip_relay).execute();
+    on_state:
+      - script.execute: copy_vals
 
   - platform: monochromatic
     id: status_led
@@ -138,6 +261,50 @@ light:
     on_state:
       - script.execute: copy_vals
 
+select:
+  - platform: template
+    id: relay_config
+    name: Relay Config
+    icon: mdi:progress-question
+    entity_category: config
+    options: [Switched, Always On]
+    initial_option: Switched
+    optimistic: true
+    restore_value: true
+    on_value:
+      - lambda: |-
+          // a change made here (HA, the 3-10 s hold) is newer than anything either leg has seen; never flips the relay
+          if (id(booted) && !id(mode_adopting)) {
+            const float p = id(peer_mode_word).state;
+            const int peer_gen = std::isnan(p) || p < 0 ? 0 : (int) p / 2;
+            id(mode_gen) = std::max(id(mode_gen), peer_gen) + 1;
+            ESP_LOGI("mode", "local: Relay Config -> %s (gen %d)", x.c_str(), id(mode_gen));
+          }
+      - script.execute: smart_refresh
+      - script.execute: mode_publish
+      - script.execute: copy_vals
+  # the smart-mode step last chosen; sent to HA as `brightness`
+  - platform: template
+    id: brightness_step
+    name: Brightness
+    icon: mdi:brightness-6
+    options: ['off', bright, medium, low, night]
+    initial_option: 'off'
+    optimistic: true
+    restore_value: false
+
+button:
+  # HA's power-up for smart mode (press on ONE leg only): restores the circuit only if Load reads off
+  - platform: template
+    id: restore_power
+    name: Restore Power
+    icon: mdi:power-plug
+    on_press:
+      - lambda: |-
+          if (id(load_sensor).state) { ESP_LOGI("relay", "restore power: already powered"); return; }
+          ESP_LOGI("relay", "restore power: Load off, flipping");
+          id(flip_relay).execute();
+
 switch:
   - platform: template
     id: no_hass
@@ -153,6 +320,7 @@ switch:
       - lambda: id(api_server)->set_reboot_timeout(900000);
 
 interval:
+  # error LED blinks while the API or Wi-Fi is in trouble
   - interval: 1500ms
     then:
       - if:
@@ -162,6 +330,28 @@ interval:
             - light.turn_on: {id: error_led, brightness: 100%, transition_length: 0s}
             - delay: 350ms
             - light.turn_off: {id: error_led, transition_length: 0s}
+  # HA watch: the power-on fallback ends when HA connects; Always On falls back after ha_offline_revert_ms without HA
+  - interval: 10s
+    then:
+      - lambda: |-
+          if (id(api_server)->is_connected()) {
+            id(api_lost_at) = 0;
+            if (id(ha_fallback)) {
+              id(ha_fallback) = false;
+              ESP_LOGI("mode", "HA connected: fallback cleared");
+              id(smart_refresh).execute();
+              id(copy_vals).execute();
+            }
+          } else {
+            if (id(api_lost_at) == 0) id(api_lost_at) = millis();
+            if (!id(ha_fallback) && id(relay_config).current_option() == "Always On" &&
+                millis() - id(api_lost_at) >= ${ha_offline_revert_ms}) {
+              id(ha_fallback) = true;           // the button now toggles the circuit, from either leg
+              ESP_LOGW("mode", "HA gone for %u ms: falling back to Switched", (unsigned) (millis() - id(api_lost_at)));
+              id(smart_refresh).execute();
+              id(copy_vals).execute();
+            }
+          }
 
 script:
   - id: flip_relay
@@ -172,13 +362,31 @@ script:
           if (id(relay_on)) id(relay_output).turn_on(); else id(relay_output).turn_off();
           ESP_LOGI("relay", "flipped -> %d", id(relay_on));
 
+  - id: smart_refresh
+    then:
+      - lambda: id(smart) = !id(ha_fallback) && id(relay_config).current_option() == "Always On";
+
+  - id: mode_publish
+    then:
+      - lambda: |-
+          id(mode_word).publish_state(id(mode_gen) * 2 + (id(relay_config).current_option() == "Always On" ? 1 : 0));
+
+  - id: step_window_timer
+    mode: restart
+    then:
+      - delay: ${step_window}
+
+  # Status LED: Switched = the circuit; smart = the mirrored bulb (dark while the circuit is unpowered)
   - id: copy_vals
     mode: restart
     then:
       - lambda: |-
-          if (id(main_button).state) return;
-          auto &cfg = id(load_sensor).state ? id(led_on_cfg)->current_values : id(led_off_cfg)->current_values;
-          const float b = cfg.is_on() ? cfg.get_brightness() : 0.0f;
+          if (id(main_button).state) return;   // hold feedback owns the LED while the button is down
+          const auto &v = id(main_light).current_values;
+          const bool on = id(load_sensor).state && (!id(smart) || v.is_on());
+          auto &cfg = on ? id(led_on_cfg)->current_values : id(led_off_cfg)->current_values;
+          float b = cfg.is_on() ? cfg.get_brightness() : 0.0f;
+          if (on && id(smart)) b *= std::max(0.15f, v.get_brightness());   // "night" still glows
           auto call = id(status_led).make_call();
           call.set_state(b > 0.0f);
           if (b > 0.0f) call.set_brightness(b);
@@ -189,36 +397,91 @@ script:
 
   - id: gesture_single
     then:
-      - script.execute: flip_relay
       - lambda: |-
-          id(ev_mode) = "Switched";
-          id(ev_brightness) = id(load_sensor).state ? "off" : "bright";   // the state it is flipping to
+          static const char *const STEPS[] = {"bright", "medium", "low", "night", "off"};
+          auto *light = id(main_light);
+          const auto &v = light->current_values;
+          const bool is_smart = id(smart);
+          std::string next;
+          if (!is_smart) {
+            next = id(load_sensor).state ? "off" : "bright";   // the state it is flipping to
+            id(flip_relay).execute();
+          } else if (!id(load_sensor).state) {
+            next = "bright";                                   // bulb unpowered: this leg alone restores the circuit
+            id(flip_relay).execute();
+          } else {
+            if (id(step_window_timer).is_running() && v.is_on()) {
+              // continue from where the bulb actually is (mirrored onto this light by HA)
+              std::string cur = v.get_color_mode() == ColorMode::RGB ? "night"
+                              : v.get_brightness() >= 0.83f ? "bright"
+                              : v.get_brightness() >= 0.5f ? "medium" : "low";
+              for (int i = 0; i < 4; i++) if (cur == STEPS[i]) { next = STEPS[i + 1]; break; }
+            } else {
+              next = v.is_on() ? "off" : "bright";
+            }
+            // smart: moving the light never touches the relay
+            if (next == "off") {
+              light->turn_off().perform();
+            } else {
+              auto call = light->turn_on();
+              if (next == "night") {
+                call.set_color_mode(ColorMode::RGB);
+                call.set_rgb(1.0f, 0.04f, 0.725f);
+                call.set_brightness(1.0f);
+              } else {
+                call.set_color_mode(ColorMode::COLD_WARM_WHITE);
+                call.set_color_temperature(300);
+                call.set_brightness(next == "bright" ? 1.0f : next == "medium" ? 0.66f : 0.33f);
+              }
+              call.perform();
+            }
+          }
+          id(brightness_step).make_call().set_option(next).perform();
+          id(ev_mode) = is_smart ? "Always On" : "Switched";
+          id(ev_brightness) = next;
+      - script.execute: step_window_timer
       - script.execute: event_single
   - id: gesture_double
     then:
-      - lambda: id(ev_mode) = "Switched";
+      - lambda: |-
+          id(ev_mode) = id(smart) ? "Always On" : "Switched";
       - script.execute: event_double
   - id: gesture_quad
     then:
-      - lambda: id(ev_mode) = "Switched";
+      - lambda: |-
+          id(ev_mode) = id(smart) ? "Always On" : "Switched";
       - script.execute: event_quad
   - id: gesture_hold
     then:
-      - lambda: id(ev_mode) = "Switched";
+      - lambda: |-
+          id(ev_mode) = id(smart) ? "Always On" : "Switched";
       - script.execute: event_hold
-  # no relay modes on a 3-way: the 3–10 s hold is passed to HA as an event
+  # 3-10 s hold: Switched <-> Always On, on BOTH legs (mode sync). Never flips the relay.
   - id: gesture_mode
     then:
-      - lambda: id(ev_mode) = "Switched";
+      - lambda: |-
+          const bool to_smart = id(relay_config).current_option() != "Always On";
+          id(relay_config).make_call().set_option(to_smart ? "Always On" : "Switched").perform();
+          id(ev_mode) = to_smart ? "Always On" : "Switched";
       - script.execute: event_switchmode
 
   - id: event_switch_on
     then:
       - homeassistant.event:
           event: esphome.switch
-          data: {devicename: '${room_key}', room: '${room_key}', name_friendly: '${friendly_name}', action: switch_on, mode: Switched}
+          data:
+            devicename: ${room_key}
+            room: ${room_key}
+            name_friendly: ${friendly_name}
+            action: switch_on
+            mode: !lambda 'return id(smart) ? "Always On" : "Switched";'
   - id: event_switch_off
     then:
       - homeassistant.event:
           event: esphome.switch
-          data: {devicename: '${room_key}', room: '${room_key}', name_friendly: '${friendly_name}', action: switch_off, mode: Switched}
+          data:
+            devicename: ${room_key}
+            room: ${room_key}
+            name_friendly: ${friendly_name}
+            action: switch_off
+            mode: !lambda 'return id(smart) ? "Always On" : "Switched";'

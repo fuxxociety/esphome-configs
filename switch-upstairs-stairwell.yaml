@@ -1,7 +1,10 @@
+# Upstairs leg of the stairwell 3-way (the other leg: switch-downstairs-stairwell). Both legs share room_key `stairs`
+# and keep Relay Config in sync with each other over UDP (templates/treatlife/ss01-3way.yaml).
 substitutions:
   name: switch-upstairs-stairwell
   friendly_name: Upstairs Stairwell
-  room_key: upstairs
+  room_key: stairs
+  peer: switch-downstairs-stairwell
 
 packages:
   device: !include templates/treatlife/ss01-3way.yaml
