@@ -1,14 +1,11 @@
-# BLE tracker + active Bluetooth proxy for HA (ESP32 only). Scan window <= 600 ms as ESPHome recommends: the
-# growlights ran 1100/1100 ms (100 % radio time), which starves Wi-Fi on the shared radio.
+# BLE tracker + active Bluetooth proxy for HA (ESP32 only), included by common/platforms/esp32*.yaml, so every ESP32
+# is a proxy (Bermuda room/floor presence). ESPHome's default scan parameters, as its docs recommend for proxies:
+# interval 320 ms, window = interval with Wi-Fi, software coexistence on (Wi-Fi keeps its share of the radio).
+# The old growlight config ran 1100/1100 ms by hand. Single-core ESP32-C3 (stairwell 3-way legs): watch Wi-Fi;
+# ESPHome's documented workaround is continuous: false + scanning only while an API client is connected.
 # Device files add their own BLE sensors (e.g. ble_rssi for a phone) on top.
-substitutions:
-  ble_scan_interval: 320ms
-  ble_scan_window: 300ms
-
 esp32_ble_tracker:
   scan_parameters:
-    interval: ${ble_scan_interval}
-    window: ${ble_scan_window}
     active: true
 
 bluetooth_proxy:
