@@ -1,4 +1,5 @@
 # Classic ESP32 (WROOM/WROVER): growlights, pedestal fan, Bluetooth proxies.
+# Every ESP32 is a Bluetooth proxy (Bermuda room presence needs every one of them; the 2026-10 migration dropped it).
 substitutions:
   esp32_board: esp32dev
 
@@ -9,3 +10,4 @@ esp32:
 
 packages:
   base: !include ../base.yaml
+  bluetooth: !include ../bluetooth/proxy.yaml
